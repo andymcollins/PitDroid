@@ -1,0 +1,55 @@
+#pragma once
+const char INDEX_HTML[] PROGMEM = R"rawliteral(
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pit Droid Control</title>
+<style>
+  body { font-family: -apple-system, sans-serif; background:#111; color:#eee;
+         padding:20px; max-width:500px; margin:auto; }
+  h2 { text-align:center; }
+  .card { background:#222; border-radius:12px; padding:16px; margin-bottom:16px; }
+  label { display:block; margin-bottom:6px; font-weight:600; }
+  input[type=range] { width:100%; }
+  input[type=color] { width:100%; height:50px; border:none; background:none; }
+  button { width:100%; padding:14px; font-size:16px; border:none;
+           border-radius:10px; background:#0a84ff; color:#fff; margin-top:8px; }
+  .val { float:right; color:#0a84ff; }
+</style>
+</head>
+<body>
+<h2>Pit Droid Control</h2>
+<div class="card">
+  <label>Head Servo <span class="val" id="servoVal">90</span></label>
+  <input type="range" min="0" max="180" value="90" id="servo"
+         oninput="document.getElementById('servoVal').innerText=this.value"
+         onchange="fetch('/servo?angle='+this.value)">
+</div>
+<div class="card">
+  <label>LED Color</label>
+  <input type="color" id="color" value="#0000ff" onchange="sendColor(this.value)">
+  <label style="margin-top:12px">Brightness <span class="val" id="briVal">80</span></label>
+  <input type="range" min="0" max="255" value="80" id="bri"
+         oninput="document.getElementById('briVal').innerText=this.value"
+         onchange="fetch('/brightness?value='+this.value)">
+</div>
+<div class="card">
+  <label>Mode</label>
+  <button onclick="fetch('/mode?set=auto')">Auto (LiDAR Track)</button>
+  <button onclick="fetch('/mode?set=manual')">Manual</button>
+</div>
+<div class="card">
+  <button onclick="fetch('/animate')">Replay Startup Animation</button>
+</div>
+<script>
+function sendColor(hex) {
+  const r = parseInt(hex.substr(1,2),16);
+  const g = parseInt(hex.substr(3,2),16);
+  const b = parseInt(hex.substr(5,2),16);
+  fetch('/led?r='+r+'&g='+g+'&b='+b);
+}
+</script>
+</body>
+</html>
+)rawliteral";
