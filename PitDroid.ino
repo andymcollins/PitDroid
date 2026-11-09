@@ -12,6 +12,9 @@
 Mode mode = AUTO;
 int panAngle = 90, tiltAngle = 90, armAngle = 0, hipAngle = 90;
 
+const char* ssid     = "YOUR_WIFI_NAME";
+const char* password = "YOUR_WIFI_PASSWORD";
+
 Adafruit_PWMServoDriver pwm(PCA9685_ADDR);
 Adafruit_NeoPixel pixels(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 WebServer server(80);
@@ -65,6 +68,12 @@ void setup() {
     server.send(200, "text/plain", "OK");
   });
   server.on("/animate", []() { startupAnimation(); server.send(200, "text/plain", "OK"); });
+
+  Serial.print("Connecting to WiFi");
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
+  Serial.println();
+  Serial.print("IP address: "); Serial.println(WiFi.localIP());
 
   server.begin();
   startupAnimation();
