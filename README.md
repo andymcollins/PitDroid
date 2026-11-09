@@ -43,8 +43,5 @@ PWM is clamped to 100-700 for MG996R safety.
 
 ## Credits
 
-The calibration page includes "Racing Pit Droid" by
-[smaedli](https://www.flickr.com/photos/75264768@N00/54129189817), licensed
-under [CC BY 2.0](https://creativecommons.org/licenses/by/2.0/). The image is
-embedded at reduced size and used only as a servo-location reference. Pit
-Droid and Star Wars are trademarks of Lucasfilm Ltd. / Disney.
+The calibration page uses a photo of this build supplied by the project owner.
+Pit Droid and Star Wars are trademarks of Lucasfilm Ltd. / Disney.
