@@ -19,7 +19,9 @@
 #define CH_HIP        4
 
 // ---- LED rings ----
-#define LED_COUNT     36   // 3 rings x 12 LEDs
+#define RING_COUNT      3
+#define LEDS_PER_RING  12
+#define LED_COUNT      (RING_COUNT * LEDS_PER_RING)
 
 // ---- Behaviour ----
 #define TRACK_DEADZONE_DEG   5

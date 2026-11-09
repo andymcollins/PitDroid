@@ -13,6 +13,8 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
   label { display:block; margin-bottom:6px; font-weight:600; }
   input[type=range] { width:100%; }
   input[type=color] { width:100%; height:50px; border:none; background:none; }
+  select { width:100%; padding:10px; font-size:16px; border-radius:8px;
+           border:1px solid #444; background:#111; color:#eee; }
   button { width:100%; padding:14px; font-size:16px; border:none;
            border-radius:10px; background:#0a84ff; color:#fff; margin-top:8px; }
   .val { float:right; color:#0a84ff; }
@@ -29,12 +31,32 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 </div>
 
 <div class="card">
-  <label>LED Color</label>
+  <label>LED Color (solid)</label>
   <input type="color" id="color" value="#0000ff" onchange="sendColor(this.value)">
   <label style="margin-top:12px">Brightness <span class="val" id="briVal">80</span></label>
   <input type="range" min="0" max="255" value="80" id="bri"
          oninput="document.getElementById('briVal').innerText=this.value"
          onchange="fetch('/brightness?value='+this.value)">
+</div>
+
+<div class="card">
+  <label>LED Animation</label>
+  <select id="anim">
+    <option value="0">Solid</option>
+    <option value="1">Rainbow</option>
+    <option value="2">Chase</option>
+    <option value="3">Comet</option>
+    <option value="4">Breathe</option>
+    <option value="5">Sparkle</option>
+    <option value="6">Scanner (Knight Rider)</option>
+    <option value="7">Theater Chase</option>
+    <option value="8">Ring Cycle</option>
+  </select>
+  <label style="margin-top:12px">Speed <span class="val" id="spdVal">50</span></label>
+  <input type="range" min="1" max="100" value="50" id="spd"
+         oninput="document.getElementById('spdVal').innerText=this.value">
+  <button onclick="applyAnim()">Apply Animation</button>
+  <button onclick="fetch('/led/auto')">Auto Status Colours</button>
 </div>
 
 <div class="card">
@@ -54,6 +76,15 @@ function sendColor(hex) {
   const g = parseInt(hex.substr(3,2),16);
   const b = parseInt(hex.substr(5,2),16);
   fetch('/led?r='+r+'&g='+g+'&b='+b);
+}
+function applyAnim() {
+  const m = document.getElementById('anim').value;
+  const s = document.getElementById('spd').value;
+  const hex = document.getElementById('color').value;
+  const r = parseInt(hex.substr(1,2),16);
+  const g = parseInt(hex.substr(3,2),16);
+  const b = parseInt(hex.substr(5,2),16);
+  fetch('/anim?mode='+m+'&speed='+s+'&r='+r+'&g='+g+'&b='+b);
 }
 </script>
 </body>

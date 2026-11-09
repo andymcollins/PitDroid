@@ -37,9 +37,7 @@ void setup() {
   setServoAngle(CH_ARM_R, armAngle);
   setServoAngle(CH_HIP, hipAngle);
 
-  pixels.begin();
-  pixels.setBrightness(80);
-  pixels.clear(); pixels.show();
+  ledBegin();
 
   radarBegin();
 
@@ -61,14 +59,24 @@ void setup() {
     server.send(200, "text/plain", "OK");
   });
   server.on("/led", []() {
-    setColor(constrain(server.arg("r").toInt(),0,255),
-             constrain(server.arg("g").toInt(),0,255),
-             constrain(server.arg("b").toInt(),0,255));
+    ledSetColor(constrain(server.arg("r").toInt(),0,255),
+                constrain(server.arg("g").toInt(),0,255),
+                constrain(server.arg("b").toInt(),0,255));
     server.send(200, "text/plain", "OK");
   });
+  server.on("/anim", []() {
+    if (server.hasArg("speed")) ledSetSpeed(server.arg("speed").toInt());
+    if (server.hasArg("r") && server.hasArg("g") && server.hasArg("b")) {
+      ledSetColor(constrain(server.arg("r").toInt(),0,255),
+                  constrain(server.arg("g").toInt(),0,255),
+                  constrain(server.arg("b").toInt(),0,255));
+    }
+    ledSetMode(server.arg("mode").toInt());
+    server.send(200, "text/plain", "OK");
+  });
+  server.on("/led/auto", []() { ledAuto(); server.send(200, "text/plain", "OK"); });
   server.on("/brightness", []() {
-    pixels.setBrightness(constrain(server.arg("value").toInt(),0,255));
-    pixels.show();
+    ledSetBrightness(constrain(server.arg("value").toInt(),0,255));
     server.send(200, "text/plain", "OK");
   });
   server.on("/mode", []() {
@@ -88,6 +96,7 @@ void setup() {
 
 void loop() {
   server.handleClient();
+  ledUpdate();
 
   RadarTarget t = radarRead();
   if (t.valid) {
@@ -109,13 +118,13 @@ void loop() {
     hipAngle = constrain(targetHip, 60, 120);
     setServoAngle(CH_HIP, hipAngle);
 
-    setColor(0, 255, 0);
+    ledSetStatus(0, 255, 0);
     mode = AUTO;
   } else {
     panAngle += 1;
     if (panAngle > 135) panAngle = 45;
     setServoAngle(CH_PAN, panAngle);
-    setColor(0, 0, 255);
+    ledSetStatus(0, 0, 255);
     mode = IDLE;
   }
   delay(30);
