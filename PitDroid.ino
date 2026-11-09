@@ -2,98 +2,105 @@
 #include <WebServer.h>
 #include <Wire.h>
 #include <Adafruit_PWMServoDriver.h>
-#include <Adafruit_VL53L0X.h>
 #include <Adafruit_NeoPixel.h>
-
 #include "config.h"
 #include "web_page.h"
 #include "servo_control.h"
-#include "lidar.h"
+#include "radar.h"
 #include "leds.h"
-#include "button.h"
-
-const char* ssid     = "YOUR_WIFI_NAME";
-const char* password = "YOUR_WIFI_PASSWORD";
 
 Mode mode = AUTO;
-int currentAngle = 90;
-int manualAngle  = 90;
-int ledR = 0, ledG = 0, ledB = 255;
-bool ledManual = false;
+int panAngle = 90, tiltAngle = 90, armAngle = 0, hipAngle = 90;
 
 Adafruit_PWMServoDriver pwm(PCA9685_ADDR);
-Adafruit_VL53L0X lox;
 Adafruit_NeoPixel pixels(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 WebServer server(80);
 
 void setup() {
   Serial.begin(115200);
+  Serial2.begin(256000, SERIAL_8N1, RADAR_RX_PIN, RADAR_TX_PIN);
   Wire.begin(SDA_PIN, SCL_PIN);
-  pinMode(BUTTON_PIN, INPUT_PULLUP);
 
   pwm.begin();
   pwm.setPWMFreq(50);
   delay(10);
-  setServoAngle(HEAD_CHANNEL, currentAngle);
-
-  if (!lox.begin()) { Serial.println("VL53L0X not found!"); while (1); }
+  setServoAngle(CH_PAN, panAngle);
+  setServoAngle(CH_TILT, tiltAngle);
+  setServoAngle(CH_ARM_L, armAngle);
+  setServoAngle(CH_ARM_R, armAngle);
+  setServoAngle(CH_HIP, hipAngle);
 
   pixels.begin();
   pixels.setBrightness(80);
-  pixels.clear();
-  pixels.show();
+  pixels.clear(); pixels.show();
 
-  Serial.print("Connecting to WiFi");
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
-  Serial.println();
-  Serial.print("IP address: "); Serial.println(WiFi.localIP());
+  radarBegin();
 
   server.on("/", []() { server.send_P(200, "text/html", INDEX_HTML); });
-
   server.on("/servo", []() {
-    if (!server.hasArg("angle")) { server.send(400, "text/plain", "missing angle"); return; }
-    manualAngle = constrain(server.arg("angle").toInt(), 0, 180);
-    if (mode == MANUAL) { currentAngle = manualAngle; setServoAngle(HEAD_CHANNEL, currentAngle); }
+    int ch = server.hasArg("ch") ? server.arg("ch").toInt() : CH_PAN;
+    int a  = constrain(server.arg("angle").toInt(), 0, 180);
+    if (ch == CH_PAN) panAngle = a;
+    else if (ch == CH_TILT) tiltAngle = a;
+    else if (ch == CH_ARM_L || ch == CH_ARM_R) armAngle = a;
+    else if (ch == CH_HIP) hipAngle = a;
+    setServoAngle(ch, a);
     server.send(200, "text/plain", "OK");
   });
-
   server.on("/led", []() {
-    ledR = constrain(server.arg("r").toInt(), 0, 255);
-    ledG = constrain(server.arg("g").toInt(), 0, 255);
-    ledB = constrain(server.arg("b").toInt(), 0, 255);
-    ledManual = true;
-    setColor(ledR, ledG, ledB);
+    setColor(constrain(server.arg("r").toInt(),0,255),
+             constrain(server.arg("g").toInt(),0,255),
+             constrain(server.arg("b").toInt(),0,255));
     server.send(200, "text/plain", "OK");
   });
-
   server.on("/brightness", []() {
-    if (!server.hasArg("value")) { server.send(400, "text/plain", "missing value"); return; }
-    pixels.setBrightness(constrain(server.arg("value").toInt(), 0, 255));
+    pixels.setBrightness(constrain(server.arg("value").toInt(),0,255));
     pixels.show();
     server.send(200, "text/plain", "OK");
   });
-
   server.on("/mode", []() {
     String m = server.arg("set");
-    if (m == "auto")   { mode = AUTO;   ledManual = false; Serial.println("Mode: AUTO"); }
-    if (m == "manual") { mode = MANUAL; ledManual = true;  Serial.println("Mode: MANUAL"); }
+    if (m == "auto") mode = AUTO;
+    if (m == "idle") mode = IDLE;
     server.send(200, "text/plain", "OK");
   });
-
   server.on("/animate", []() { startupAnimation(); server.send(200, "text/plain", "OK"); });
 
   server.begin();
-  Serial.println("Web server started");
   startupAnimation();
 }
 
 void loop() {
   server.handleClient();
-  handleButton();
 
-  if (mode == AUTO && !ledManual)      runAutoMode();
-  else if (mode == MANUAL)             setColor(ledR, ledG, ledB);
+  RadarTarget t = radarRead();
+  if (t.valid) {
+    int targetPan = 90 + (int)(t.angleDeg * 0.9f);
+    if (abs(targetPan - panAngle) > TRACK_DEADZONE_DEG) {
+      panAngle += (targetPan > panAngle) ? 2 : -2;
+      setServoAngle(CH_PAN, panAngle);
+    }
+    int targetTilt = map(constrain(t.distanceMm, 200, 3000), 200, 3000, 120, 60);
+    tiltAngle += (targetTilt > tiltAngle) ? 1 : (targetTilt < tiltAngle ? -1 : 0);
+    setServoAngle(CH_TILT, tiltAngle);
 
-  delay(20);
+    int targetArm = (t.distanceMm < ARM_RAISE_DIST_MM) ? 45 : 0;
+    armAngle = targetArm;
+    setServoAngle(CH_ARM_L, armAngle);
+    setServoAngle(CH_ARM_R, armAngle);
+
+    int targetHip = 90 + (int)(t.angleDeg * HIP_FOLLOW_FACTOR);
+    hipAngle = constrain(targetHip, 60, 120);
+    setServoAngle(CH_HIP, hipAngle);
+
+    setColor(0, 255, 0);
+    mode = AUTO;
+  } else {
+    panAngle += 1;
+    if (panAngle > 135) panAngle = 45;
+    setServoAngle(CH_PAN, panAngle);
+    setColor(0, 0, 255);
+    mode = IDLE;
+  }
+  delay(30);
 }
