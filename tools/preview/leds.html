@@ -50,9 +50,17 @@
             color: #6f7890; font-size: 12px; margin-top: 10px; }
   .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%;
          background: #3d8bff; margin-right: 6px; vertical-align: 1px; }
+  .backbar { width: min(92vw, 560px); display: flex; justify-content: flex-start; }
+  .backbar a {
+    color: #9fb4d8; text-decoration: none; font-size: 14px; font-weight: 600;
+    padding: 8px 14px; border: 1px solid #2a3040; border-radius: 10px;
+    background: #151821;
+  }
+  .backbar a:hover { color: #e8eaf0; border-color: #3d8bff; }
 </style>
 </head>
 <body>
+<div class="backbar"><a href="/">&larr; Back to Control</a></div>
 <h1>LED Ring Preview</h1>
 <div class="sub">52 × WS2812B · 24 + 16 + 12 rings · same patterns as the firmware</div>
 

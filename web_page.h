@@ -68,9 +68,15 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 <div class="card">
   <button onclick="fetch('/animate')">Replay Startup Animation</button>
   <button onclick="location.href='/cal'">Servo Calibration</button>
+  <button id="previewBtn" style="display:none" onclick="location.href='/preview'">LED Ring Preview</button>
 </div>
 
 <script>
+// The ring preview is a simulator served by tools/preview/server.py, so the
+// link is only shown when this page is opened from the local preview server.
+if (location.hostname === '127.0.0.1' || location.hostname === 'localhost') {
+  document.getElementById('previewBtn').style.display = 'block';
+}
 function sendColor(hex) {
   const r = parseInt(hex.substr(1,2),16);
   const g = parseInt(hex.substr(3,2),16);
