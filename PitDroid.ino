@@ -8,12 +8,13 @@
 #include "servo_control.h"
 #include "radar.h"
 #include "leds.h"
-
-Mode mode = AUTO;
-int panAngle = 90, tiltAngle = 90, armAngle = 0, hipAngle = 90;
+#include "calibration.h"
 
 const char* ssid     = "YOUR_WIFI_NAME";
 const char* password = "YOUR_WIFI_PASSWORD";
+
+Mode mode = AUTO;
+int panAngle = 90, tiltAngle = 90, armAngle = 0, hipAngle = 90;
 
 Adafruit_PWMServoDriver pwm(PCA9685_ADDR);
 Adafruit_NeoPixel pixels(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
@@ -27,6 +28,9 @@ void setup() {
   pwm.begin();
   pwm.setPWMFreq(50);
   delay(10);
+
+  calibrationBegin();
+
   setServoAngle(CH_PAN, panAngle);
   setServoAngle(CH_TILT, tiltAngle);
   setServoAngle(CH_ARM_L, armAngle);
@@ -38,6 +42,12 @@ void setup() {
   pixels.clear(); pixels.show();
 
   radarBegin();
+
+  Serial.print("Connecting to WiFi");
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
+  Serial.println();
+  Serial.print("IP: "); Serial.println(WiFi.localIP());
 
   server.on("/", []() { server.send_P(200, "text/html", INDEX_HTML); });
   server.on("/servo", []() {
@@ -69,13 +79,10 @@ void setup() {
   });
   server.on("/animate", []() { startupAnimation(); server.send(200, "text/plain", "OK"); });
 
-  Serial.print("Connecting to WiFi");
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
-  Serial.println();
-  Serial.print("IP address: "); Serial.println(WiFi.localIP());
+  calibrationHandler();
 
   server.begin();
+  Serial.println("Web server started");
   startupAnimation();
 }
 

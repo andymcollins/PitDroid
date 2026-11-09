@@ -6,7 +6,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pit Droid Control</title>
 <style>
-  body { font-family: -apple-system, sans-serif; background:#111; color:#eee;
+  body { font-family:-apple-system,sans-serif; background:#111; color:#eee;
          padding:20px; max-width:500px; margin:auto; }
   h2 { text-align:center; }
   .card { background:#222; border-radius:12px; padding:16px; margin-bottom:16px; }
@@ -20,12 +20,14 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 </head>
 <body>
 <h2>Pit Droid Control</h2>
+
 <div class="card">
   <label>Head Servo <span class="val" id="servoVal">90</span></label>
   <input type="range" min="0" max="180" value="90" id="servo"
          oninput="document.getElementById('servoVal').innerText=this.value"
-         onchange="fetch('/servo?angle='+this.value)">
+         onchange="fetch('/servo?ch=0&angle='+this.value)">
 </div>
+
 <div class="card">
   <label>LED Color</label>
   <input type="color" id="color" value="#0000ff" onchange="sendColor(this.value)">
@@ -34,14 +36,18 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
          oninput="document.getElementById('briVal').innerText=this.value"
          onchange="fetch('/brightness?value='+this.value)">
 </div>
+
 <div class="card">
   <label>Mode</label>
-  <button onclick="fetch('/mode?set=auto')">Auto (LiDAR Track)</button>
-  <button onclick="fetch('/mode?set=manual')">Manual</button>
+  <button onclick="fetch('/mode?set=auto')">Auto (Radar Track)</button>
+  <button onclick="fetch('/mode?set=idle')">Idle</button>
 </div>
+
 <div class="card">
   <button onclick="fetch('/animate')">Replay Startup Animation</button>
+  <button onclick="location.href='/cal'">Servo Calibration</button>
 </div>
+
 <script>
 function sendColor(hex) {
   const r = parseInt(hex.substr(1,2),16);
