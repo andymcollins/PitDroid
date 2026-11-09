@@ -31,6 +31,7 @@ pan/tilt servos via PCA9685, with 3 chained NeoPixel rings in the eye
 Navigate to `http://<esp32-ip>/cal` after powering the droid.
 
 1. Select a channel: 0 Pan, 1 Tilt, 2 Left Arm, 3 Right Arm, 4 Hip.
+   You can also tap the numbered marker on the Pit Droid photo.
    All five can be calibrated; only channels enabled in `SERVO_PRESENT_MASK`
    are used for radar motion.
 2. Use -5/+5 buttons or the slider to find the mechanical limits.
@@ -39,3 +40,11 @@ Navigate to `http://<esp32-ip>/cal` after powering the droid.
 5. Test Sweep verifies the full travel.
 
 PWM is clamped to 100-700 for MG996R safety.
+
+## Credits
+
+The calibration page includes "Racing Pit Droid" by
+[smaedli](https://www.flickr.com/photos/75264768@N00/54129189817), licensed
+under [CC BY 2.0](https://creativecommons.org/licenses/by/2.0/). The image is
+embedded at reduced size and used only as a servo-location reference. Pit
+Droid and Star Wars are trademarks of Lucasfilm Ltd. / Disney.
