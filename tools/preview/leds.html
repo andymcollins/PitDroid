@@ -54,7 +54,7 @@
 </head>
 <body>
 <h1>LED Ring Preview</h1>
-<div class="sub">36 × WS2812 · 3 rings × 12 LEDs · same patterns as the firmware</div>
+<div class="sub">52 × WS2812B · 24 + 16 + 12 rings · same patterns as the firmware</div>
 
 <div class="stage">
   <canvas id="c" width="640" height="640"></canvas>
@@ -100,12 +100,24 @@
 </div>
 
 <script>
-const N = 36, PER = 12, RING_COUNT = 3;
-const RING_RADII = [118, 178, 238];   // inner → outer (ring 0 → 2)
+// Real hardware: 3 chained rings with unequal lengths (outer → inner).
+const RING_LEDS = [24, 16, 12];
+const RING_COUNT = RING_LEDS.length;
+const RING_START = RING_LEDS.map((_, i) =>
+  RING_LEDS.slice(0, i).reduce((a, b) => a + b, 0));
+const N = RING_LEDS.reduce((a, b) => a + b, 0);
+const RING_RADII = [238, 178, 118];   // ring 0 = outer (24), ring 2 = inner (12)
 const LED_R = 15;
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 const CX = 320, CY = 320;
+
+function ringOf(i) {
+  for (let r = RING_COUNT - 1; r >= 0; r--) {
+    if (i >= RING_START[r]) return r;
+  }
+  return 0;
+}
 
 const ui = {
   mode: document.getElementById('mode'),
@@ -201,10 +213,12 @@ function renderTheater() {
   for (let i = 0; i < N; i++) buf[i] = ((i + frame) % 3 === 0) ? full : dim;
 }
 function renderRings() {
-  for (let i = 0; i < N; i++) {
-    const ring = Math.floor(i / PER);
+  for (let ring = 0; ring < RING_COUNT; ring++) {
     const hue = (Math.floor(ring * 65536 / RING_COUNT) + frame * 180) & 0xFFFF;
-    buf[i] = hsv(hue, 255, 255);
+    const c = hsv(hue, 255, 255);
+    for (let i = RING_START[ring]; i < RING_START[ring] + RING_LEDS[ring]; i++) {
+      buf[i] = c;
+    }
   }
 }
 
@@ -244,9 +258,9 @@ function draw() {
 
   const bri = brightness / 255;
   for (let i = 0; i < N; i++) {
-    const ring = Math.floor(i / PER);
-    const idx = i % PER;
-    const angle = -Math.PI / 2 + (idx * Math.PI * 2) / PER;
+    const ring = ringOf(i);
+    const idx = i - RING_START[ring];
+    const angle = -Math.PI / 2 + (idx * Math.PI * 2) / RING_LEDS[ring];
     const rad = RING_RADII[ring];
     const x = CX + Math.cos(angle) * rad;
     const y = CY + Math.sin(angle) * rad;

@@ -1,7 +1,8 @@
 # Pit Droid — ESP32 Radar Head Tracking
 
 ESP32 WROOM-32 firmware for a Pit Droid: RD-03D mmWave radar (chest) drives
-pan/tilt/arm/hip servos via PCA9685, with 3 chained NeoPixel rings in the eye.
+pan/tilt/arm/hip servos via PCA9685, with 3 chained NeoPixel rings in the eye
+(24 + 16 + 12 = 52 LEDs).
 
 ## Hardware
 - 2S LiPo (7.4V) + fuse + switch
@@ -11,7 +12,7 @@ pan/tilt/arm/hip servos via PCA9685, with 3 chained NeoPixel rings in the eye.
 - PCA9685 (I2C 0x40) — SDA=21, SCL=22
 - RD-03D mmWave — 5V power, TX→GPIO16, RX optional→GPIO17
 - 5x MG996R on PCA9685 CH0–CH4
-- 3x WS2812 LED rings chained, DIN=GPIO4
+- 3x WS2812B LED rings chained: 24 + 16 + 12 = 52 LEDs, DIN=GPIO4
 
 ## Libraries
 - Adafruit PWM Servo Driver Library

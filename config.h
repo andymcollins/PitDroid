@@ -18,10 +18,12 @@
 #define CH_ARM_R      3
 #define CH_HIP        4
 
-// ---- LED rings ----
+// ---- LED rings (24 + 16 + 12 = 52 addressable LEDs, chained) ----
 #define RING_COUNT      3
-#define LEDS_PER_RING  12
-#define LED_COUNT      (RING_COUNT * LEDS_PER_RING)
+#define RING0_LEDS     24   // outer ring
+#define RING1_LEDS     16   // middle ring
+#define RING2_LEDS     12   // inner ring
+#define LED_COUNT      (RING0_LEDS + RING1_LEDS + RING2_LEDS)
 
 // ---- Behaviour ----
 #define TRACK_DEADZONE_DEG   5

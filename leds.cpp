@@ -120,11 +120,25 @@ static void renderTheater() {
   }
 }
 
+// Ring lengths are unequal, so map each ring to its own slice of the strip.
+static const uint16_t RING_START[RING_COUNT] = {
+  0,
+  RING0_LEDS,
+  RING0_LEDS + RING1_LEDS
+};
+static const uint16_t RING_LEN[RING_COUNT] = {
+  RING0_LEDS,
+  RING1_LEDS,
+  RING2_LEDS
+};
+
 static void renderRings() {
-  for (int i = 0; i < LED_COUNT; i++) {
-    uint8_t ring = i / LEDS_PER_RING;
+  for (uint8_t ring = 0; ring < RING_COUNT; ring++) {
     uint16_t hue = (uint16_t)((uint32_t)ring * (65536UL / RING_COUNT) + frame * 180UL);
-    buf[i] = hsv(hue, 255, 255);
+    uint32_t c = hsv(hue, 255, 255);
+    for (uint16_t i = RING_START[ring]; i < RING_START[ring] + RING_LEN[ring]; i++) {
+      buf[i] = c;
+    }
   }
 }
 
