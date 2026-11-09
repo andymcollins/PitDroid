@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pit Droid — LED Ring Preview</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: radial-gradient(circle at 50% 35%, #1a1d24 0%, #0a0b0e 70%);
+    color: #e8eaf0;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 24px 16px 40px;
+  }
+  h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; letter-spacing: .2px; }
+  .sub { color: #8b93a7; font-size: 13px; margin-bottom: 18px; }
+  .stage { position: relative; }
+  canvas { display: block; width: min(88vw, 560px); height: auto; }
+  .panel {
+    width: min(92vw, 560px); background: #151821; border: 1px solid #242938;
+    border-radius: 16px; padding: 16px; margin-top: 18px;
+    display: grid; gap: 14px;
+  }
+  .row { display: flex; align-items: center; gap: 12px; }
+  .row label { flex: 0 0 88px; font-size: 13px; color: #aab2c5; }
+  select, input[type=range] { width: 100%; }
+  select {
+    background: #0d1017; color: #e8eaf0; border: 1px solid #2a3040;
+    border-radius: 10px; padding: 10px 12px; font-size: 15px;
+  }
+  input[type=range] { accent-color: #3d8bff; height: 28px; }
+  input[type=color] {
+    width: 100%; height: 42px; border: 1px solid #2a3040; border-radius: 10px;
+    background: #0d1017; padding: 3px; cursor: pointer;
+  }
+  .value { flex: 0 0 40px; text-align: right; font-variant-numeric: tabular-nums;
+           color: #7fb0ff; font-size: 13px; }
+  .btns { display: flex; gap: 10px; }
+  button {
+    flex: 1; border: 0; border-radius: 11px; padding: 12px;
+    font-size: 14px; font-weight: 600; color: #fff; background: #2b62d9;
+    cursor: pointer;
+  }
+  button.secondary { background: #262c3a; color: #cfd6e6; }
+  button:active { transform: translateY(1px); }
+  .legend { display: flex; justify-content: center; gap: 18px;
+            color: #6f7890; font-size: 12px; margin-top: 10px; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+         background: #3d8bff; margin-right: 6px; vertical-align: 1px; }
+</style>
+</head>
+<body>
+<h1>LED Ring Preview</h1>
+<div class="sub">36 × WS2812 · 3 rings × 12 LEDs · same patterns as the firmware</div>
+
+<div class="stage">
+  <canvas id="c" width="640" height="640"></canvas>
+  <div class="legend">
+    <span><span class="dot"></span><span id="patName">Solid</span></span>
+    <span id="frameInfo">frame 0</span>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="row">
+    <label for="mode">Pattern</label>
+    <select id="mode">
+      <option value="0">Solid</option>
+      <option value="1" selected>Rainbow</option>
+      <option value="2">Chase</option>
+      <option value="3">Comet</option>
+      <option value="4">Breathe</option>
+      <option value="5">Sparkle</option>
+      <option value="6">Scanner (Knight Rider)</option>
+      <option value="7">Theater Chase</option>
+      <option value="8">Ring Cycle</option>
+    </select>
+  </div>
+  <div class="row">
+    <label for="speed">Speed</label>
+    <input type="range" id="speed" min="1" max="100" value="50">
+    <span class="value" id="speedVal">50</span>
+  </div>
+  <div class="row">
+    <label for="color">Base colour</label>
+    <input type="color" id="color" value="#00ff80">
+  </div>
+  <div class="row">
+    <label for="bri">Brightness</label>
+    <input type="range" id="bri" min="10" max="255" value="200">
+    <span class="value" id="briVal">200</span>
+  </div>
+  <div class="btns">
+    <button id="play">Pause</button>
+    <button class="secondary" id="step">Step</button>
+  </div>
+</div>
+
+<script>
+const N = 36, PER = 12, RING_COUNT = 3;
+const RING_RADII = [118, 178, 238];   // inner → outer (ring 0 → 2)
+const LED_R = 15;
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const CX = 320, CY = 320;
+
+const ui = {
+  mode: document.getElementById('mode'),
+  speed: document.getElementById('speed'),
+  speedVal: document.getElementById('speedVal'),
+  color: document.getElementById('color'),
+  bri: document.getElementById('bri'),
+  briVal: document.getElementById('briVal'),
+  play: document.getElementById('play'),
+  step: document.getElementById('step'),
+  patName: document.getElementById('patName'),
+  frameInfo: document.getElementById('frameInfo'),
+};
+
+const MODE_NAMES = ['Solid','Rainbow','Chase','Comet','Breathe','Sparkle','Scanner','Theater','Ring Cycle'];
+let mode = 1, speed = 50, brightness = 200;
+let base = hexToRgb(ui.color.value);
+let frame = 0, playing = true, last = 0, buf = new Array(N).fill(0);
+
+// ---- colour helpers (mirror leds.cpp) ----
+function rgb(r, g, b) { return ((r & 255) << 16) | ((g & 255) << 8) | (b & 255); }
+function hexToRgb(hex) {
+  return [parseInt(hex.substr(1,2),16), parseInt(hex.substr(3,2),16), parseInt(hex.substr(5,2),16)];
+}
+function scaleColor(c, s) {
+  const r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255;
+  return rgb(Math.floor(r * s / 255), Math.floor(g * s / 255), Math.floor(b * s / 255));
+}
+function hsv(h, s, v) {
+  h &= 0xFFFF;
+  const region = Math.floor(h / 10923), rem = h % 10923;
+  const p = Math.floor(v * (255 - s) / 255);
+  const q = Math.floor(v * (255 - Math.floor(s * rem / 10923)) / 255);
+  const t = Math.floor(v * (255 - Math.floor(s * (10923 - rem) / 10923)) / 255);
+  switch (region) {
+    case 0: return rgb(v, t, p);
+    case 1: return rgb(q, v, p);
+    case 2: return rgb(p, v, t);
+    case 3: return rgb(p, q, v);
+    case 4: return rgb(t, p, v);
+    default: return rgb(v, p, q);
+  }
+}
+
+// ---- patterns (mirror leds.cpp) ----
+function renderSolid() {
+  const c = rgb(...base);
+  for (let i = 0; i < N; i++) buf[i] = c;
+}
+function renderRainbow() {
+  for (let i = 0; i < N; i++) {
+    const hue = (Math.floor(i * 65536 / N) + frame * 256) & 0xFFFF;
+    buf[i] = hsv(hue, 255, 255);
+  }
+}
+function renderChase() {
+  const dim = scaleColor(rgb(...base), 20);
+  for (let i = 0; i < N; i++) buf[i] = dim;
+  buf[frame % N] = rgb(...base);
+}
+function renderComet() {
+  const tail = 8, pos = frame % N;
+  for (let i = 0; i < N; i++) {
+    const d = (pos - i + N) % N;
+    buf[i] = d < tail ? scaleColor(rgb(...base), 255 - Math.floor(d * 255 / tail)) : 0;
+  }
+}
+function renderBreathe() {
+  const phase = frame % 120;
+  let level = phase < 60 ? Math.floor(phase * 255 / 60) : Math.floor((120 - phase) * 255 / 60);
+  if (level < 8) level = 8;
+  const c = scaleColor(rgb(...base), level);
+  for (let i = 0; i < N; i++) buf[i] = c;
+}
+function renderSparkle() {
+  for (let i = 0; i < N; i++) buf[i] = scaleColor(buf[i], 180);
+  for (let n = 0; n < 3; n++) {
+    const i = Math.floor(Math.random() * N);
+    buf[i] = hsv(Math.floor(Math.random() * 65536), 255, 255);
+  }
+}
+function renderScanner() {
+  const tail = 6, period = 2 * (N - 1);
+  const p = frame % period;
+  const pos = p < N ? p : period - p;
+  for (let i = 0; i < N; i++) {
+    const d = Math.abs(i - pos);
+    buf[i] = d < tail ? scaleColor(rgb(...base), 255 - Math.floor(d * 255 / tail)) : 0;
+  }
+}
+function renderTheater() {
+  const full = rgb(...base), dim = scaleColor(full, 25);
+  for (let i = 0; i < N; i++) buf[i] = ((i + frame) % 3 === 0) ? full : dim;
+}
+function renderRings() {
+  for (let i = 0; i < N; i++) {
+    const ring = Math.floor(i / PER);
+    const hue = (Math.floor(ring * 65536 / RING_COUNT) + frame * 180) & 0xFFFF;
+    buf[i] = hsv(hue, 255, 255);
+  }
+}
+
+function renderFrame() {
+  switch (mode) {
+    case 1: renderRainbow(); break;
+    case 2: renderChase(); break;
+    case 3: renderComet(); break;
+    case 4: renderBreathe(); break;
+    case 5: renderSparkle(); break;
+    case 6: renderScanner(); break;
+    case 7: renderTheater(); break;
+    case 8: renderRings(); break;
+    default: renderSolid(); break;
+  }
+  draw();
+  ui.frameInfo.textContent = 'frame ' + frame;
+}
+
+// ---- draw ----
+function draw() {
+  ctx.clearRect(0, 0, 640, 640);
+
+  // housing / guide rings
+  for (const r of RING_RADII) {
+    ctx.beginPath();
+    ctx.arc(CX, CY, r, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(140,160,200,0.10)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+  // centre hub
+  ctx.beginPath();
+  ctx.arc(CX, CY, 26, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.03)';
+  ctx.fill();
+
+  const bri = brightness / 255;
+  for (let i = 0; i < N; i++) {
+    const ring = Math.floor(i / PER);
+    const idx = i % PER;
+    const angle = -Math.PI / 2 + (idx * Math.PI * 2) / PER;
+    const rad = RING_RADII[ring];
+    const x = CX + Math.cos(angle) * rad;
+    const y = CY + Math.sin(angle) * rad;
+
+    const c = buf[i];
+    let r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255;
+    r = Math.round(r * bri); g = Math.round(g * bri); b = Math.round(b * bri);
+
+    // off LED
+    ctx.beginPath();
+    ctx.arc(x, y, LED_R, 0, Math.PI * 2);
+    ctx.fillStyle = '#14171f';
+    ctx.fill();
+
+    if (r + g + b > 6) {
+      // glow
+      ctx.save();
+      ctx.shadowBlur = 26;
+      ctx.shadowColor = `rgb(${r},${g},${b})`;
+      ctx.beginPath();
+      ctx.arc(x, y, LED_R, 0, Math.PI * 2);
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      ctx.fill();
+      ctx.restore();
+
+      // hot core
+      ctx.beginPath();
+      ctx.arc(x - LED_R * 0.22, y - LED_R * 0.22, LED_R * 0.42, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,255,255,${0.35 + 0.35 * Math.min(1, (r+g+b)/765)})`;
+      ctx.fill();
+    }
+  }
+}
+
+// ---- timing (mirror firmware: interval = map(speed,1,100,200,10)) ----
+function intervalMs() { return Math.round(200 - (speed - 1) * 190 / 99); }
+
+function loop(ts) {
+  if (playing && ts - last >= intervalMs()) {
+    last = ts;
+    frame++;
+    renderFrame();
+  }
+  requestAnimationFrame(loop);
+}
+
+function syncLabels() {
+  ui.speedVal.textContent = speed;
+  ui.briVal.textContent = brightness;
+  ui.patName.textContent = MODE_NAMES[mode] || 'Solid';
+}
+
+ui.mode.addEventListener('change', () => {
+  mode = parseInt(ui.mode.value, 10);
+  frame = 0;
+  buf.fill(0);
+  syncLabels();
+  renderFrame();
+});
+ui.speed.addEventListener('input', () => {
+  speed = parseInt(ui.speed.value, 10);
+  syncLabels();
+});
+ui.color.addEventListener('input', () => {
+  base = hexToRgb(ui.color.value);
+  if (mode === 0 || mode === 2 || mode === 3 || mode === 4 || mode === 6 || mode === 7) renderFrame();
+});
+ui.bri.addEventListener('input', () => {
+  brightness = parseInt(ui.bri.value, 10);
+  syncLabels();
+  draw();
+});
+ui.play.addEventListener('click', () => {
+  playing = !playing;
+  ui.play.textContent = playing ? 'Pause' : 'Play';
+});
+ui.step.addEventListener('click', () => {
+  frame++;
+  renderFrame();
+});
+
+syncLabels();
+renderFrame();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

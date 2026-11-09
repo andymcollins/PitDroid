@@ -68,6 +68,9 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         a = self._args()
 
+        if path == "/preview":
+            return self._send((ROOT / "tools" / "preview" / "leds.html").read_text())
+
         if path == "/":
             return self._send(INDEX_HTML)
         if path == "/cal":
