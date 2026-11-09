@@ -69,10 +69,35 @@ const char CAL_HTML[] PROGMEM = R"rawliteral(
   .row button.warn { background:#c93c37; }
   .val { float:right; color:#0a84ff; }
   .small { font-size:12px; color:#888; text-align:center; margin-top:8px; }
+  /* servo location diagram */
+  .droid { width:100%; max-width:250px; margin:0 auto; }
+  .droid svg { width:100%; height:auto; display:block; }
+  .droid .part { fill:#1a1f27; stroke:#4a5563; stroke-width:1.6; stroke-linejoin:round; }
+  .droid .part.dark { fill:#0e1218; }
+  .droid .limb { fill:none; stroke:#4a5563; stroke-width:18;
+                 stroke-linecap:round; stroke-linejoin:round; }
+  .droid .eye { fill:#05080c; stroke:#4a5563; stroke-width:1.6; }
+  .droid .glow { fill:#0a84ff; opacity:.55; }
+  .droid .side { fill:#7d8796; font:9px -apple-system,sans-serif; letter-spacing:.08em; }
+  .droid .srv { cursor:pointer; }
+  .droid .srv rect { fill:#10243d; stroke:#0a84ff; stroke-width:1.6; }
+  .droid .srv text { fill:#7fb0ff; font:11px ui-monospace,monospace;
+                     text-anchor:middle; dominant-baseline:central; pointer-events:none; }
+  .droid .srv.off { opacity:.22; cursor:default; }
+  .droid .srv.active rect { fill:#0a84ff; stroke:#0a84ff; }
+  .droid .srv.active text { fill:#08111c; }
+  .droid .srv.hl rect, .droid .srv:hover rect { fill:#0a84ff; stroke:#0a84ff; }
+  .droid .srv.hl text, .droid .srv:hover text { fill:#08111c; }
 </style>
 </head>
 <body>
 <h2>Servo Calibration</h2>
+
+<div class="card">
+  <label>Servo Locations</label>
+  <div class="droid" id="droid"></div>
+  <div class="small">Tap a marker to select that channel. Front view; labels follow the droid's own left/right.</div>
+</div>
 
 <div class="card">
   <label>Channel</label>
@@ -120,26 +145,104 @@ const char CAL_HTML[] PROGMEM = R"rawliteral(
 
 <script>
 let currentCh = 0;
+let availableChannels = [0, 1, 2, 3, 4];
 const CHANNEL_NAMES = {0:'Pan', 1:'Tilt', 2:'Arm L', 3:'Arm R', 4:'Hip'};
+// Marker positions in the SVG (front view). CH2/CH3 are the droid's own
+// left/right, so they appear on the opposite side to the viewer.
+const SERVO_POS = {
+  0: {x:   0, y: 176},   // Pan  - neck base
+  1: {x:   0, y: 140},   // Tilt - head/neck joint
+  2: {x:  64, y: 206},   // Arm L - droid's left shoulder
+  3: {x: -64, y: 206},   // Arm R - droid's right shoulder
+  4: {x:   0, y: 318}    // Hip  - waist
+};
+
+function renderDroid() {
+  const p = [];
+  // antenna + head
+  p.push('<line class="part" x1="0" y1="46" x2="0" y2="16"/>');
+  p.push('<circle class="part" cx="0" cy="12" r="5"/>');
+  p.push('<rect class="part" x="-46" y="46" width="92" height="88" rx="20"/>');
+  p.push('<circle class="eye" cx="-20" cy="88" r="13"/>');
+  p.push('<circle class="eye" cx="20" cy="88" r="13"/>');
+  p.push('<circle class="glow" cx="-20" cy="88" r="5"/>');
+  p.push('<circle class="glow" cx="20" cy="88" r="5"/>');
+  p.push('<rect class="part dark" x="-18" y="114" width="36" height="9" rx="4"/>');
+  // neck + torso + chest panel
+  p.push('<rect class="part dark" x="-12" y="134" width="24" height="48" rx="6"/>');
+  p.push('<rect class="part" x="-58" y="182" width="116" height="122" rx="18"/>');
+  p.push('<rect class="part dark" x="-30" y="208" width="60" height="46" rx="8"/>');
+  p.push('<line class="part" x1="-22" y1="222" x2="22" y2="222"/>');
+  p.push('<line class="part" x1="-22" y1="236" x2="22" y2="236"/>');
+  // arms + hands
+  p.push('<path class="limb" d="M-58,200 L-84,258 L-78,306"/>');
+  p.push('<path class="limb" d="M58,200 L84,258 L78,306"/>');
+  p.push('<circle class="part dark" cx="-78" cy="310" r="10"/>');
+  p.push('<circle class="part dark" cx="78" cy="310" r="10"/>');
+  // waist + legs + feet
+  p.push('<rect class="part dark" x="-44" y="302" width="88" height="30" rx="8"/>');
+  p.push('<path class="limb" d="M-22,330 L-26,456"/>');
+  p.push('<path class="limb" d="M22,330 L26,456"/>');
+  p.push('<polygon class="part" points="-42,456 -12,456 -8,490 -48,490"/>');
+  p.push('<polygon class="part" points="12,456 42,456 48,490 8,490"/>');
+  p.push('<text class="side" x="-76" y="524" text-anchor="middle">DROID RIGHT</text>');
+  p.push('<text class="side" x="76" y="524" text-anchor="middle">DROID LEFT</text>');
+  // clickable servo tags
+  for (const ch of [0, 1, 2, 3, 4]) {
+    const s = SERVO_POS[ch];
+    const on = availableChannels.includes(ch);
+    p.push('<g class="srv' + (on ? '' : ' off') +
+           (ch === currentCh ? ' active' : '') + '" data-ch="' + ch + '">' +
+           '<title>CH' + ch + ' - ' + (CHANNEL_NAMES[ch] || ch) + '</title>' +
+           '<rect x="' + (s.x - 17) + '" y="' + (s.y - 11) + '" width="34" height="22" rx="5"/>' +
+           '<text x="' + s.x + '" y="' + (s.y + 1) + '">' + ch + '</text></g>');
+  }
+  const box = document.getElementById('droid');
+  box.innerHTML = '<svg viewBox="-120 0 240 540" role="img" ' +
+                  'aria-label="Pit Droid servo locations, front view">' + p.join('') + '</svg>';
+  box.querySelectorAll('.srv:not(.off)').forEach(g => {
+    const ch = parseInt(g.dataset.ch);
+    g.addEventListener('click', () => selectChannel(ch));
+    g.addEventListener('mouseenter', () => g.classList.add('hl'));
+    g.addEventListener('mouseleave', () => g.classList.remove('hl'));
+  });
+}
+
+function selectChannel(ch) {
+  const sel = document.getElementById('ch');
+  sel.value = String(ch);
+  loadCh();
+}
+
+function updateDroidActive() {
+  document.querySelectorAll('#droid .srv').forEach(g => {
+    g.classList.toggle('active', parseInt(g.dataset.ch) === currentCh);
+  });
+}
+
 async function loadChannels() {
   const sel = document.getElementById('ch');
+  let list = [0];
   try {
-    const list = await (await fetch('/cal/channels')).json();
-    sel.innerHTML = '';
-    list.forEach(ch => {
-      const o = document.createElement('option');
-      o.value = ch;
-      o.textContent = ch + ' - ' + (CHANNEL_NAMES[ch] || ('CH ' + ch));
-      sel.appendChild(o);
-    });
+    list = await (await fetch('/cal/channels')).json();
   } catch (e) {
-    sel.innerHTML = '<option value="0">0 - Pan</option>';
+    list = [0];
   }
+  availableChannels = list;
+  sel.innerHTML = '';
+  list.forEach(ch => {
+    const o = document.createElement('option');
+    o.value = ch;
+    o.textContent = ch + ' - ' + (CHANNEL_NAMES[ch] || ('CH ' + ch));
+    sel.appendChild(o);
+  });
   if (sel.options.length) currentCh = parseInt(sel.options[0].value);
+  renderDroid();
   loadCh();
 }
 function loadCh() {
   currentCh = parseInt(document.getElementById('ch').value);
+  updateDroidActive();
   fetch('/cal/values?ch=' + currentCh)
     .then(r => r.json())
     .then(d => {
