@@ -172,8 +172,8 @@ loadChannels();
 </html>
 )rawliteral";
 
-static bool channelPresent(int ch) {
-  return ch >= 0 && ch < 5 && SERVO_PRESENT((uint8_t)ch);
+static bool channelCalibratable(int ch) {
+  return ch >= 0 && ch < 5 && SERVO_CALIBRATABLE((uint8_t)ch);
 }
 
 void calibrationHandler() {
@@ -183,7 +183,7 @@ void calibrationHandler() {
     String j = "[";
     bool first = true;
     for (uint8_t ch = 0; ch < 5; ch++) {
-      if (!SERVO_PRESENT(ch)) continue;
+      if (!SERVO_CALIBRATABLE(ch)) continue;
       if (!first) j += ",";
       j += String(ch);
       first = false;
@@ -194,7 +194,7 @@ void calibrationHandler() {
 
   server.on("/cal/values", []() {
     int ch = server.hasArg("ch") ? server.arg("ch").toInt() : 0;
-    if (!channelPresent(ch)) { server.send(400, "text/plain", "Channel not connected"); return; }
+    if (!channelCalibratable(ch)) { server.send(400, "text/plain", "Channel not available"); return; }
     ServoCal c = calibrationGet(ch);
     String j = "{\"min\":" + String(c.minPwm) +
                ",\"ctr\":" + String(c.centerPwm) +
@@ -204,7 +204,7 @@ void calibrationHandler() {
 
   server.on("/cal/pwm", []() {
     int ch = server.arg("ch").toInt();
-    if (!channelPresent(ch)) { server.send(400, "text/plain", "Channel not connected"); return; }
+    if (!channelCalibratable(ch)) { server.send(400, "text/plain", "Channel not available"); return; }
     int v = constrain(server.arg("v").toInt(), 100, 700);
     pwm.setPWM(ch, 0, v);
     server.send(200, "text/plain", "OK");
@@ -212,7 +212,7 @@ void calibrationHandler() {
 
   server.on("/cal/move", []() {
     int ch = server.arg("ch").toInt();
-    if (!channelPresent(ch)) { server.send(400, "text/plain", "Channel not connected"); return; }
+    if (!channelCalibratable(ch)) { server.send(400, "text/plain", "Channel not available"); return; }
     String to = server.arg("to");
     ServoCal c = calibrationGet(ch);
     int v = c.centerPwm;
@@ -224,7 +224,7 @@ void calibrationHandler() {
 
   server.on("/cal/save", []() {
     int ch = server.arg("ch").toInt();
-    if (!channelPresent(ch)) { server.send(400, "text/plain", "Channel not connected"); return; }
+    if (!channelCalibratable(ch)) { server.send(400, "text/plain", "Channel not available"); return; }
     String which = server.arg("which");
     int v = constrain(server.arg("v").toInt(), 100, 700);
     ServoCal c = calibrationGet(ch);
@@ -237,7 +237,7 @@ void calibrationHandler() {
 
   server.on("/cal/sweep", []() {
     int ch = server.arg("ch").toInt();
-    if (!channelPresent(ch)) { server.send(400, "text/plain", "Channel not connected"); return; }
+    if (!channelCalibratable(ch)) { server.send(400, "text/plain", "Channel not available"); return; }
     ServoCal c = calibrationGet(ch);
     for (int v = c.minPwm; v <= c.maxPwm; v += 10) { pwm.setPWM(ch, 0, v); delay(30); }
     for (int v = c.maxPwm; v >= c.minPwm; v -= 10) { pwm.setPWM(ch, 0, v); delay(30); }

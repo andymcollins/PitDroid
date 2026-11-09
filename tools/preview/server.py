@@ -121,7 +121,11 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(json.dumps(state["cal"].get(ch, {})), "application/json")
 
         if path == "/cal/channels":
-            # Mirrors SERVO_PRESENT_MASK: Pan (CH0) + Tilt (CH1) only.
+            # Mirrors SERVO_CAL_MASK: all five channels can be calibrated.
+            return self._send(json.dumps([0, 1, 2, 3, 4]), "application/json")
+
+        if path == "/servo/channels":
+            # Mirrors SERVO_PRESENT_MASK: Pan (CH0) + Tilt (CH1) drive motion.
             return self._send(json.dumps([0, 1]), "application/json")
 
         if path == "/cal/pwm":

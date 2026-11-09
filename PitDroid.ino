@@ -91,6 +91,19 @@ void setup() {
   });
   server.on("/animate", []() { startupAnimation(); server.send(200, "text/plain", "OK"); });
 
+  server.on("/servo/channels", []() {
+    String j = "[";
+    bool first = true;
+    for (uint8_t ch = 0; ch < 5; ch++) {
+      if (!SERVO_PRESENT(ch)) continue;
+      if (!first) j += ",";
+      j += String(ch);
+      first = false;
+    }
+    j += "]";
+    server.send(200, "application/json", j);
+  });
+
   calibrationHandler();
 
   server.begin();

@@ -19,10 +19,15 @@
 #define CH_HIP        4
 
 // All five PCA9685 channels stay defined, but only the bits set here are
-// treated as physically connected. The UI and motion code skip the rest.
-// bit0 = Pan, bit1 = Tilt, bit2 = Arm L, bit3 = Arm R, bit4 = Hip.
+// treated as physically connected for motion. The UI and motion code skip
+// the rest. bit0 = Pan, bit1 = Tilt, bit2 = Arm L, bit3 = Arm R, bit4 = Hip.
 #define SERVO_PRESENT_MASK 0x03   // 0x03 = Pan + Tilt only
 #define SERVO_PRESENT(ch)  (((SERVO_PRESENT_MASK) >> (ch)) & 0x01)
+
+// Channels shown on the calibration page. Default is all five so the arm and
+// hip servos can be calibrated before they are enabled for motion.
+#define SERVO_CAL_MASK 0x1F
+#define SERVO_CALIBRATABLE(ch) (((SERVO_CAL_MASK) >> (ch)) & 0x01)
 
 // ---- LED rings (24 + 16 + 12 = 52 addressable LEDs, chained) ----
 #define RING_COUNT      3

@@ -11,8 +11,9 @@ pan/tilt servos via PCA9685, with 3 chained NeoPixel rings in the eye
 - ESP32 WROOM-32
 - PCA9685 (I2C 0x40) — SDA=21, SCL=22
 - RD-03D mmWave — 5V power, TX→GPIO16, RX optional→GPIO17
-- 2x MG996R on PCA9685 CH0 (pan) and CH1 (tilt). CH2–CH4 stay defined in
-  `config.h` but are marked absent via `SERVO_PRESENT_MASK`.
+- 2x MG996R connected: PCA9685 CH0 (pan) and CH1 (tilt). CH2 (Left Arm),
+  CH3 (Right Arm) and CH4 (Hip) stay defined and calibratable; enable them
+  for motion by setting bits in `SERVO_PRESENT_MASK` in `config.h`.
 - 3x WS2812B LED rings chained: 24 + 16 + 12 = 52 LEDs, DIN=GPIO4
 
 ## Libraries
@@ -29,8 +30,9 @@ pan/tilt servos via PCA9685, with 3 chained NeoPixel rings in the eye
 
 Navigate to `http://<esp32-ip>/cal` after powering the droid.
 
-1. Select a channel. Only physically connected channels are listed
-   (currently Pan CH0 and Tilt CH1).
+1. Select a channel: 0 Pan, 1 Tilt, 2 Left Arm, 3 Right Arm, 4 Hip.
+   All five can be calibrated; only channels enabled in `SERVO_PRESENT_MASK`
+   are used for radar motion.
 2. Use -5/+5 buttons or the slider to find the mechanical limits.
 3. Save as Min, Max, and Center for each channel.
 4. Values persist in NVS (flash) across reboots.

@@ -83,7 +83,7 @@ async function buildServoSliders() {
   const box = document.getElementById('servoSliders');
   let list = [0];
   try {
-    list = await (await fetch('/cal/channels')).json();
+    list = await (await fetch('/servo/channels')).json();
   } catch (e) {}
   box.innerHTML = '';
   list.forEach((ch, i) => {
