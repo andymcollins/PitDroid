@@ -1,0 +1,51 @@
+<mxfile host="app.diagrams.net" modified="2024-01-01T00:00:00.000Z" agent="manual" version="22.0.0">
+  <diagram id="pitdroid-2s" name="PitDroid 2S Wiring">
+    <mxGraphModel dx="1600" dy="1100" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="1100" math="0" shadow="0" background="#ffffff">
+      <root>
+        <mxCell id="0" /><mxCell id="1" parent="0" />
+
+        <mxCell id="lipo" value="2S LiPo 7.4V&#10;(8.4V full)&#10;+ fuse + switch" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="1"><mxGeometry x="60" y="300" width="180" height="100" as="geometry" /></mxCell>
+        <mxCell id="buck5" value="Buck A 5V&#10;(logic: ESP32 VIN + radar + LEDs)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="1"><mxGeometry x="320" y="180" width="200" height="90" as="geometry" /></mxCell>
+        <mxCell id="buck6" value="Buck B 6V&#10;(XL4015, servo rail)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="1"><mxGeometry x="320" y="420" width="200" height="90" as="geometry" /></mxCell>
+        <mxCell id="esp" value="ESP32 WROOM-32&#10;VIN GND&#10;GPIO21 SDA&#10;GPIO22 SCL&#10;GPIO16 RX (radar)&#10;GPIO4 LED data" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=left;spacingLeft=8;" vertex="1" parent="1"><mxGeometry x="620" y="140" width="220" height="150" as="geometry" /></mxCell>
+        <mxCell id="radar" value="RD-03D mmWave&#10;(chest, metal shield behind)&#10;5V GND TX (RX optional)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=left;spacingLeft=8;" vertex="1" parent="1"><mxGeometry x="620" y="360" width="220" height="100" as="geometry" /></mxCell>
+        <mxCell id="pca" value="PCA9685&#10;VCC GND SDA SCL&#10;V+ V−&#10;CH0 pan CH1 tilt&#10;CH2-3 arms CH4 hip" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=8;" vertex="1" parent="1"><mxGeometry x="920" y="140" width="220" height="150" as="geometry" /></mxCell>
+        <mxCell id="servos" value="5x MG996R&#10;pan/tilt/2 arms/hip" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="1220" y="160" width="140" height="90" as="geometry" /></mxCell>
+        <mxCell id="leds" value="3x LED rings&#10;(chained, eye)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="1"><mxGeometry x="620" y="540" width="180" height="80" as="geometry" /></mxCell>
+
+        <mxCell id="w1" value="+ 7.4V (Red)" style="endArrow=classic;html=1;strokeColor=#FF0000;strokeWidth=4;" edge="1" parent="1" source="lipo" target="buck5"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="w2" value="− GND (Black)" style="endArrow=classic;html=1;strokeColor=#000000;strokeWidth=4;" edge="1" parent="1" source="lipo" target="buck5"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="w3" value="+ 7.4V (Red)" style="endArrow=classic;html=1;strokeColor=#FF0000;strokeWidth=4;" edge="1" parent="1" source="lipo" target="buck6"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="w4" value="− GND (Black)" style="endArrow=classic;html=1;strokeColor=#000000;strokeWidth=4;" edge="1" parent="1" source="lipo" target="buck6"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="w5" value="5V → VIN (Orange)" style="endArrow=classic;html=1;strokeColor=#FFA500;strokeWidth=3;" edge="1" parent="1" source="buck5" target="esp"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="w6" value="GND (Black)" style="endArrow=classic;html=1;strokeColor=#000000;strokeWidth=3;" edge="1" parent="1" source="buck5" target="esp"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="w7" value="5V (Orange)" style="endArrow=classic;html=1;strokeColor=#FFA500;strokeWidth=2;" edge="1" parent="1" source="buck5" target="radar"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="w8" value="GND (Black)" style="endArrow=classic;html=1;strokeColor=#000000;strokeWidth=2;" edge="1" parent="1" source="buck5" target="radar"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="w9" value="5V (Orange)" style="endArrow=classic;html=1;strokeColor=#FFA500;strokeWidth=2;" edge="1" parent="1" source="buck5" target="leds"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="w10" value="GND (Black)" style="endArrow=classic;html=1;strokeColor=#000000;strokeWidth=2;" edge="1" parent="1" source="buck5" target="leds"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="w11" value="6V → PCA V+ (Red thick)" style="endArrow=classic;html=1;strokeColor=#FF0000;strokeWidth=4;" edge="1" parent="1" source="buck6" target="pca"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="w12" value="GND → PCA V− (Black thick)" style="endArrow=classic;html=1;strokeColor=#000000;strokeWidth=4;" edge="1" parent="1" source="buck6" target="pca"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="w13" value="3V3 logic (Orange)" style="endArrow=classic;html=1;strokeColor=#FFA500;strokeWidth=2;" edge="1" parent="1" source="esp" target="pca"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="w14" value="GND logic (Black)" style="endArrow=classic;html=1;strokeColor=#000000;strokeWidth=2;" edge="1" parent="1" source="esp" target="pca"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="w15" value="SDA GPIO21 (Blue)" style="endArrow=classic;html=1;strokeColor=#0000FF;strokeWidth=2;" edge="1" parent="1" source="esp" target="pca"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="w16" value="SCL GPIO22 (Green)" style="endArrow=classic;html=1;strokeColor=#00AA00;strokeWidth=2;" edge="1" parent="1" source="esp" target="pca"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="w17" value="TX → GPIO16 RX (Purple)" style="endArrow=classic;html=1;strokeColor=#800080;strokeWidth=2;" edge="1" parent="1" source="radar" target="esp"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="w18" value="GPIO4 → DIN (Yellow)" style="endArrow=classic;html=1;strokeColor=#FFFF00;strokeWidth=3;" edge="1" parent="1" source="esp" target="leds"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="w19" value="CH0-CH4 signal (Cyan)" style="endArrow=classic;html=1;strokeColor=#00FFFF;strokeWidth=2;" edge="1" parent="1" source="pca" target="servos"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="w20" value="V+ 6V (Red)" style="endArrow=classic;html=1;strokeColor=#FF0000;strokeWidth=3;" edge="1" parent="1" source="pca" target="servos"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="w21" value="V− GND (Black)" style="endArrow=classic;html=1;strokeColor=#000000;strokeWidth=3;" edge="1" parent="1" source="pca" target="servos"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="n1" value="⚠ Common GND: LiPo −, Buck A −, Buck B −, ESP32, PCA, radar, LEDs" style="text;html=1;fontSize=12;fontColor=#b85450;" vertex="1" parent="1"><mxGeometry x="320" y="760" width="700" height="30" as="geometry" /></mxCell>
+        <mxCell id="n2" value="⚠ Metal shield behind RD-03D. Plastic chest plate only in front. Rigid mount." style="text;html=1;fontSize=12;fontColor=#b85450;" vertex="1" parent="1"><mxGeometry x="320" y="800" width="700" height="30" as="geometry" /></mxCell>
+        <mxCell id="n3" value="⚠ Do NOT power servos from Buck A. Servo rail is Buck B only." style="text;html=1;fontSize=12;fontColor=#b85450;" vertex="1" parent="1"><mxGeometry x="320" y="840" width="700" height="30" as="geometry" /></mxCell>
+        <mxCell id="n4" value="Neck cable: 20 AWG servo pwr, 22-24 AWG signal/radar/LED. Silicone." style="text;html=1;fontSize=12;fontColor=#666666;" vertex="1" parent="1"><mxGeometry x="320" y="880" width="700" height="30" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
