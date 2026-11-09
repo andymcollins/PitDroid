@@ -24,10 +24,10 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 <h2>Pit Droid Control</h2>
 
 <div class="card">
-  <label>Head Servo <span class="val" id="servoVal">90</span></label>
-  <input type="range" min="0" max="180" value="90" id="servo"
-         oninput="document.getElementById('servoVal').innerText=this.value"
-         onchange="fetch('/servo?ch=0&angle='+this.value)">
+  <div id="servoSliders">
+    <label>Servo</label>
+    <div style="color:#888;font-size:13px">Loading...</div>
+  </div>
 </div>
 
 <div class="card">
@@ -77,6 +77,35 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 if (location.hostname === '127.0.0.1' || location.hostname === 'localhost') {
   document.getElementById('previewBtn').style.display = 'block';
 }
+
+const SERVO_NAMES = {0:'Pan', 1:'Tilt', 2:'Arm L', 3:'Arm R', 4:'Hip'};
+async function buildServoSliders() {
+  const box = document.getElementById('servoSliders');
+  let list = [0];
+  try {
+    list = await (await fetch('/cal/channels')).json();
+  } catch (e) {}
+  box.innerHTML = '';
+  list.forEach((ch, i) => {
+    const label = document.createElement('label');
+    label.innerHTML = (SERVO_NAMES[ch] || ('CH ' + ch)) +
+                      ' <span class="val" id="v' + ch + '">90</span>';
+    if (i > 0) label.style.marginTop = '14px';
+    const input = document.createElement('input');
+    input.type = 'range';
+    input.min = 0; input.max = 180; input.value = 90;
+    input.addEventListener('input', () => {
+      document.getElementById('v' + ch).innerText = input.value;
+    });
+    input.addEventListener('change', () => {
+      fetch('/servo?ch=' + ch + '&angle=' + input.value);
+    });
+    box.appendChild(label);
+    box.appendChild(input);
+  });
+}
+buildServoSliders();
+
 function sendColor(hex) {
   const r = parseInt(hex.substr(1,2),16);
   const g = parseInt(hex.substr(3,2),16);

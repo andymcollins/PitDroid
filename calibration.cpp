@@ -76,13 +76,7 @@ const char CAL_HTML[] PROGMEM = R"rawliteral(
 
 <div class="card">
   <label>Channel</label>
-  <select id="ch" onchange="loadCh()">
-    <option value="0">0 - Pan</option>
-    <option value="1">1 - Tilt</option>
-    <option value="2">2 - Arm L</option>
-    <option value="3">3 - Arm R</option>
-    <option value="4">4 - Hip</option>
-  </select>
+  <select id="ch" onchange="loadCh()"></select>
 </div>
 
 <div class="card">
@@ -126,6 +120,24 @@ const char CAL_HTML[] PROGMEM = R"rawliteral(
 
 <script>
 let currentCh = 0;
+const CHANNEL_NAMES = {0:'Pan', 1:'Tilt', 2:'Arm L', 3:'Arm R', 4:'Hip'};
+async function loadChannels() {
+  const sel = document.getElementById('ch');
+  try {
+    const list = await (await fetch('/cal/channels')).json();
+    sel.innerHTML = '';
+    list.forEach(ch => {
+      const o = document.createElement('option');
+      o.value = ch;
+      o.textContent = ch + ' - ' + (CHANNEL_NAMES[ch] || ('CH ' + ch));
+      sel.appendChild(o);
+    });
+  } catch (e) {
+    sel.innerHTML = '<option value="0">0 - Pan</option>';
+  }
+  if (sel.options.length) currentCh = parseInt(sel.options[0].value);
+  loadCh();
+}
 function loadCh() {
   currentCh = parseInt(document.getElementById('ch').value);
   fetch('/cal/values?ch=' + currentCh)
@@ -154,17 +166,35 @@ document.getElementById('pwm').addEventListener('input', function() {
   document.getElementById('pwmVal').innerText = this.value;
   fetch('/cal/pwm?ch=' + currentCh + '&v=' + this.value);
 });
-loadCh();
+loadChannels();
 </script>
 </body>
 </html>
 )rawliteral";
 
+static bool channelPresent(int ch) {
+  return ch >= 0 && ch < 5 && SERVO_PRESENT((uint8_t)ch);
+}
+
 void calibrationHandler() {
   server.on("/cal", []() { server.send_P(200, "text/html", CAL_HTML); });
 
+  server.on("/cal/channels", []() {
+    String j = "[";
+    bool first = true;
+    for (uint8_t ch = 0; ch < 5; ch++) {
+      if (!SERVO_PRESENT(ch)) continue;
+      if (!first) j += ",";
+      j += String(ch);
+      first = false;
+    }
+    j += "]";
+    server.send(200, "application/json", j);
+  });
+
   server.on("/cal/values", []() {
-    uint8_t ch = server.hasArg("ch") ? server.arg("ch").toInt() : 0;
+    int ch = server.hasArg("ch") ? server.arg("ch").toInt() : 0;
+    if (!channelPresent(ch)) { server.send(400, "text/plain", "Channel not connected"); return; }
     ServoCal c = calibrationGet(ch);
     String j = "{\"min\":" + String(c.minPwm) +
                ",\"ctr\":" + String(c.centerPwm) +
@@ -173,14 +203,16 @@ void calibrationHandler() {
   });
 
   server.on("/cal/pwm", []() {
-    uint8_t ch = server.arg("ch").toInt();
+    int ch = server.arg("ch").toInt();
+    if (!channelPresent(ch)) { server.send(400, "text/plain", "Channel not connected"); return; }
     int v = constrain(server.arg("v").toInt(), 100, 700);
     pwm.setPWM(ch, 0, v);
     server.send(200, "text/plain", "OK");
   });
 
   server.on("/cal/move", []() {
-    uint8_t ch = server.arg("ch").toInt();
+    int ch = server.arg("ch").toInt();
+    if (!channelPresent(ch)) { server.send(400, "text/plain", "Channel not connected"); return; }
     String to = server.arg("to");
     ServoCal c = calibrationGet(ch);
     int v = c.centerPwm;
@@ -191,7 +223,8 @@ void calibrationHandler() {
   });
 
   server.on("/cal/save", []() {
-    uint8_t ch = server.arg("ch").toInt();
+    int ch = server.arg("ch").toInt();
+    if (!channelPresent(ch)) { server.send(400, "text/plain", "Channel not connected"); return; }
     String which = server.arg("which");
     int v = constrain(server.arg("v").toInt(), 100, 700);
     ServoCal c = calibrationGet(ch);
@@ -203,7 +236,8 @@ void calibrationHandler() {
   });
 
   server.on("/cal/sweep", []() {
-    uint8_t ch = server.arg("ch").toInt();
+    int ch = server.arg("ch").toInt();
+    if (!channelPresent(ch)) { server.send(400, "text/plain", "Channel not connected"); return; }
     ServoCal c = calibrationGet(ch);
     for (int v = c.minPwm; v <= c.maxPwm; v += 10) { pwm.setPWM(ch, 0, v); delay(30); }
     for (int v = c.maxPwm; v >= c.minPwm; v -= 10) { pwm.setPWM(ch, 0, v); delay(30); }

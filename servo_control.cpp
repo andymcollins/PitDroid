@@ -20,7 +20,6 @@ void startupAnimation() {
   ServoCal pan  = calibrationGet(CH_PAN);
   ServoCal tilt = calibrationGet(CH_TILT);
   ServoCal armL = calibrationGet(CH_ARM_L);
-  ServoCal armR = calibrationGet(CH_ARM_R);
   ServoCal hip  = calibrationGet(CH_HIP);
 
   int panMid  = (pan.minPwm  + pan.maxPwm)  / 2;
@@ -28,26 +27,30 @@ void startupAnimation() {
   int armMid  = (armL.minPwm + armL.maxPwm) / 2;
   int hipMid  = (hip.minPwm  + hip.maxPwm)  / 2;
 
-  for (int v = panMid; v <= pan.maxPwm; v += 5) { pwm.setPWM(CH_PAN, 0, v); delay(10); }
-  for (int v = pan.maxPwm; v >= pan.minPwm; v -= 5) { pwm.setPWM(CH_PAN, 0, v); delay(10); }
-  for (int v = pan.minPwm; v <= panMid; v += 5) { pwm.setPWM(CH_PAN, 0, v); delay(10); }
-
-  for (int v = armMid; v <= armL.maxPwm; v += 5) {
-    pwm.setPWM(CH_ARM_L, 0, v);
-    pwm.setPWM(CH_ARM_R, 0, v);
-    delay(10);
-  }
-  for (int v = armL.maxPwm; v >= armMid; v -= 5) {
-    pwm.setPWM(CH_ARM_L, 0, v);
-    pwm.setPWM(CH_ARM_R, 0, v);
-    delay(10);
+  if (SERVO_PRESENT(CH_PAN)) {
+    for (int v = panMid; v <= pan.maxPwm; v += 5) { pwm.setPWM(CH_PAN, 0, v); delay(10); }
+    for (int v = pan.maxPwm; v >= pan.minPwm; v -= 5) { pwm.setPWM(CH_PAN, 0, v); delay(10); }
+    for (int v = pan.minPwm; v <= panMid; v += 5) { pwm.setPWM(CH_PAN, 0, v); delay(10); }
   }
 
-  pwm.setPWM(CH_PAN,   0, panMid);
-  pwm.setPWM(CH_TILT,  0, tiltMid);
-  pwm.setPWM(CH_ARM_L, 0, armMid);
-  pwm.setPWM(CH_ARM_R, 0, armMid);
-  pwm.setPWM(CH_HIP,   0, hipMid);
+  if (SERVO_PRESENT(CH_ARM_L) && SERVO_PRESENT(CH_ARM_R)) {
+    for (int v = armMid; v <= armL.maxPwm; v += 5) {
+      pwm.setPWM(CH_ARM_L, 0, v);
+      pwm.setPWM(CH_ARM_R, 0, v);
+      delay(10);
+    }
+    for (int v = armL.maxPwm; v >= armMid; v -= 5) {
+      pwm.setPWM(CH_ARM_L, 0, v);
+      pwm.setPWM(CH_ARM_R, 0, v);
+      delay(10);
+    }
+  }
+
+  if (SERVO_PRESENT(CH_PAN))  pwm.setPWM(CH_PAN,  0, panMid);
+  if (SERVO_PRESENT(CH_TILT)) pwm.setPWM(CH_TILT, 0, tiltMid);
+  if (SERVO_PRESENT(CH_ARM_L)) pwm.setPWM(CH_ARM_L, 0, armMid);
+  if (SERVO_PRESENT(CH_ARM_R)) pwm.setPWM(CH_ARM_R, 0, armMid);
+  if (SERVO_PRESENT(CH_HIP))  pwm.setPWM(CH_HIP,  0, hipMid);
 
   for (int j = 0; j < 3; j++) {
     for (int i = 0; i < pixels.numPixels(); i++) {

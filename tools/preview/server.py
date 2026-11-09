@@ -120,6 +120,10 @@ class Handler(BaseHTTPRequestHandler):
             print(f"[cal/values] ch={ch}")
             return self._send(json.dumps(state["cal"].get(ch, {})), "application/json")
 
+        if path == "/cal/channels":
+            # Mirrors SERVO_PRESENT_MASK: Pan (CH0) + Tilt (CH1) only.
+            return self._send(json.dumps([0, 1]), "application/json")
+
         if path == "/cal/pwm":
             ch = int(a.get("ch", 0))
             v = max(100, min(700, int(a.get("v", 375))))

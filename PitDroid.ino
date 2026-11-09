@@ -31,11 +31,11 @@ void setup() {
 
   calibrationBegin();
 
-  setServoAngle(CH_PAN, panAngle);
-  setServoAngle(CH_TILT, tiltAngle);
-  setServoAngle(CH_ARM_L, armAngle);
-  setServoAngle(CH_ARM_R, armAngle);
-  setServoAngle(CH_HIP, hipAngle);
+  if (SERVO_PRESENT(CH_PAN))  setServoAngle(CH_PAN, panAngle);
+  if (SERVO_PRESENT(CH_TILT)) setServoAngle(CH_TILT, tiltAngle);
+  if (SERVO_PRESENT(CH_ARM_L)) setServoAngle(CH_ARM_L, armAngle);
+  if (SERVO_PRESENT(CH_ARM_R)) setServoAngle(CH_ARM_R, armAngle);
+  if (SERVO_PRESENT(CH_HIP))  setServoAngle(CH_HIP, hipAngle);
 
   ledBegin();
 
@@ -51,6 +51,10 @@ void setup() {
   server.on("/servo", []() {
     int ch = server.hasArg("ch") ? server.arg("ch").toInt() : CH_PAN;
     int a  = constrain(server.arg("angle").toInt(), 0, 180);
+    if (ch < 0 || ch > 4 || !SERVO_PRESENT(ch)) {
+      server.send(400, "text/plain", "Channel not connected");
+      return;
+    }
     if (ch == CH_PAN) panAngle = a;
     else if (ch == CH_TILT) tiltAngle = a;
     else if (ch == CH_ARM_L || ch == CH_ARM_R) armAngle = a;
@@ -103,27 +107,27 @@ void loop() {
     int targetPan = 90 + (int)(t.angleDeg * 0.9f);
     if (abs(targetPan - panAngle) > TRACK_DEADZONE_DEG) {
       panAngle += (targetPan > panAngle) ? 2 : -2;
-      setServoAngle(CH_PAN, panAngle);
+      if (SERVO_PRESENT(CH_PAN)) setServoAngle(CH_PAN, panAngle);
     }
     int targetTilt = map(constrain(t.distanceMm, 200, 3000), 200, 3000, 120, 60);
     tiltAngle += (targetTilt > tiltAngle) ? 1 : (targetTilt < tiltAngle ? -1 : 0);
-    setServoAngle(CH_TILT, tiltAngle);
+    if (SERVO_PRESENT(CH_TILT)) setServoAngle(CH_TILT, tiltAngle);
 
     int targetArm = (t.distanceMm < ARM_RAISE_DIST_MM) ? 45 : 0;
     armAngle = targetArm;
-    setServoAngle(CH_ARM_L, armAngle);
-    setServoAngle(CH_ARM_R, armAngle);
+    if (SERVO_PRESENT(CH_ARM_L)) setServoAngle(CH_ARM_L, armAngle);
+    if (SERVO_PRESENT(CH_ARM_R)) setServoAngle(CH_ARM_R, armAngle);
 
     int targetHip = 90 + (int)(t.angleDeg * HIP_FOLLOW_FACTOR);
     hipAngle = constrain(targetHip, 60, 120);
-    setServoAngle(CH_HIP, hipAngle);
+    if (SERVO_PRESENT(CH_HIP)) setServoAngle(CH_HIP, hipAngle);
 
     ledSetStatus(0, 255, 0);
     mode = AUTO;
   } else {
     panAngle += 1;
     if (panAngle > 135) panAngle = 45;
-    setServoAngle(CH_PAN, panAngle);
+    if (SERVO_PRESENT(CH_PAN)) setServoAngle(CH_PAN, panAngle);
     ledSetStatus(0, 0, 255);
     mode = IDLE;
   }

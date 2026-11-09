@@ -18,6 +18,12 @@
 #define CH_ARM_R      3
 #define CH_HIP        4
 
+// All five PCA9685 channels stay defined, but only the bits set here are
+// treated as physically connected. The UI and motion code skip the rest.
+// bit0 = Pan, bit1 = Tilt, bit2 = Arm L, bit3 = Arm R, bit4 = Hip.
+#define SERVO_PRESENT_MASK 0x03   // 0x03 = Pan + Tilt only
+#define SERVO_PRESENT(ch)  (((SERVO_PRESENT_MASK) >> (ch)) & 0x01)
+
 // ---- LED rings (24 + 16 + 12 = 52 addressable LEDs, chained) ----
 #define RING_COUNT      3
 #define RING0_LEDS     24   // outer ring
