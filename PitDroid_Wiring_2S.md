@@ -47,3 +47,11 @@ flowchart LR
   style PCA fill:#d5e8d4
   style SERVOS fill:#d5e8d4
   style LEDS fill:#f8cecc
+```
+
+## Notes
+
+- **Common GND**: LiPo −, Buck A −, Buck B −, ESP32, PCA, radar, LEDs all tied together.
+- **Metal shield behind RD-03D**, plastic chest plate only in front, rigid mount.
+- **Do NOT power servos from Buck A** — servo rail is Buck B only.
+- **Neck cable**: 20 AWG servo power, 22–24 AWG signal/radar/LED, silicone insulation.
