@@ -4,6 +4,7 @@
 #include <Adafruit_PWMServoDriver.h>
 #include "config.h"
 #include "calibration.h"
+#include "web_auth.h"
 
 extern Adafruit_PWMServoDriver pwm;
 extern WebServer server;
@@ -53,44 +54,92 @@ const char CAL_HTML[] PROGMEM = R"rawliteral(
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pit Droid - Servo Calibration</title>
 <style>
-  body { font-family:-apple-system,sans-serif; background:#111; color:#eee;
-         padding:16px; max-width:520px; margin:auto; }
-  h2 { text-align:center; margin:4px 0 12px; }
-  .card { background:#222; border-radius:12px; padding:14px; margin-bottom:14px; }
-  label { display:block; margin-bottom:6px; font-weight:600; }
-  select { width:100%; padding:10px; font-size:16px; border-radius:8px;
-           border:1px solid #444; background:#111; color:#eee; }
-  input[type=range] { width:100%; }
-  .row { display:flex; gap:8px; margin-top:8px; }
-  .row button { flex:1; padding:12px; font-size:16px; border:none;
-         border-radius:10px; background:#0a84ff; color:#fff; }
-  .row button.alt { background:#444; }
-  .row button.save { background:#30a14e; }
-  .row button.warn { background:#c93c37; }
-  .val { float:right; color:#0a84ff; }
-  .small { font-size:12px; color:#888; text-align:center; margin-top:8px; }
-  /* servo location diagram */
-  .droid { position:relative; width:100%; max-width:300px; margin:0 auto;
-           border-radius:12px; overflow:hidden; background:#0b0f14;
-           border:1px solid #2a3441; }
-  .droid img { width:100%; height:auto; display:block;
-               filter:brightness(.86) contrast(1.06) saturate(.85); }
-  .droid .shade { position:absolute; inset:0; pointer-events:none;
-                  background:radial-gradient(circle at 52% 42%,
-                    rgba(5,8,12,0) 38%, rgba(5,8,12,.6) 100%); }
-  .droid .srv { position:absolute; z-index:2; transform:translate(-50%,-50%);
-                width:26px; height:26px; padding:0; border-radius:50%;
-                border:2px solid #0a84ff; background:rgba(8,18,32,.82);
-                color:#8fc0ff; font:700 12px ui-monospace,monospace;
-                display:flex; align-items:center; justify-content:center;
-                cursor:pointer; }
-  .droid .srv:hover, .droid .srv.active { background:#0a84ff; color:#08111c; }
-  .droid .srv.active { box-shadow:0 0 0 4px rgba(10,132,255,.3); }
-  .droid .srv.off { opacity:.3; cursor:default; }
+:root{--cy:#22e0ff;--mg:#ff2d95;--lm:#a8ff3e;--ink:#dff6ff;--dim:#6fa8c7}
+*{box-sizing:border-box}
+html{min-height:100%}
+body{margin:0 auto;padding:16px 16px 34px;max-width:520px;min-height:100vh;
+  background:#04060c;color:var(--ink);
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  background-image:radial-gradient(1100px 520px at 50% -15%,#0e2338 0%,#04060c 62%);
+  background-attachment:fixed;-webkit-tap-highlight-color:transparent}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:99;
+  background:repeating-linear-gradient(0deg,rgba(180,240,255,.03) 0 1px,transparent 1px 3px)}
+.hdr{display:flex;justify-content:space-between;align-items:center;
+  padding-bottom:12px;margin-bottom:16px;font-size:10px;letter-spacing:.24em;
+  color:var(--dim);border-bottom:1px solid rgba(34,224,255,.22)}
+.hdr b{color:var(--cy);font-weight:600;text-shadow:0 0 10px rgba(34,224,255,.6)}
+.card{position:relative;border:1px solid rgba(34,224,255,.28);border-radius:18px;
+  background:linear-gradient(180deg,rgba(12,28,46,.92),rgba(4,8,14,.94));
+  box-shadow:inset 0 0 40px rgba(34,224,255,.06),0 0 28px rgba(0,0,0,.55);
+  padding:14px;margin-bottom:14px}
+.card::before,.card::after{content:"";position:absolute;width:14px;height:14px;
+  border:2px solid var(--cy);opacity:.5}
+.card::before{top:7px;left:7px;border-right:0;border-bottom:0;border-radius:6px 0 0 0}
+.card::after{bottom:7px;right:7px;border-left:0;border-top:0;border-radius:0 0 6px 0}
+label{display:block;margin-bottom:8px;font-size:10px;letter-spacing:.22em;
+  text-transform:uppercase;color:var(--dim)}
+select{width:100%;padding:11px 12px;font-size:13px;font-family:inherit;
+  letter-spacing:.08em;border-radius:10px;border:1px solid rgba(34,224,255,.4);
+  background:#08121c;color:var(--ink);outline:none}
+select:focus{border-color:var(--cy);box-shadow:0 0 14px rgba(34,224,255,.3)}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:26px;
+  background:transparent;margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:8px;border-radius:99px;
+  background:linear-gradient(90deg,rgba(34,224,255,.28),rgba(255,45,149,.28));
+  border:1px solid rgba(34,224,255,.38)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;
+  margin-top:-6px;border-radius:5px;border:1px solid #eaffff;
+  background:linear-gradient(180deg,#c9fbff,#22e0ff);
+  box-shadow:0 0 12px rgba(34,224,255,.85)}
+input[type=range]::-moz-range-track{height:8px;border-radius:99px;
+  background:linear-gradient(90deg,rgba(34,224,255,.28),rgba(255,45,149,.28));
+  border:1px solid rgba(34,224,255,.38)}
+input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:5px;
+  border:1px solid #eaffff;background:#22e0ff;box-shadow:0 0 12px rgba(34,224,255,.85)}
+.row{display:flex;gap:8px;margin-top:8px}
+.row button{flex:1;padding:12px;font-size:10px;font-family:inherit;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);cursor:pointer;
+  border:1px solid rgba(34,224,255,.55);border-radius:10px;
+  background:linear-gradient(180deg,rgba(34,224,255,.16),rgba(34,224,255,.04));
+  box-shadow:0 0 14px rgba(34,224,255,.14),inset 0 0 12px rgba(34,224,255,.06);
+  transition:background .15s,box-shadow .15s,transform .06s}
+.row button:hover{background:rgba(34,224,255,.26);box-shadow:0 0 22px rgba(34,224,255,.4)}
+.row button:active{transform:translateY(1px)}
+.row button.alt{border-color:rgba(111,168,199,.4);color:var(--dim);
+  background:rgba(111,168,199,.08);box-shadow:none}
+.row button.save{border-color:rgba(168,255,62,.6);color:var(--lm);
+  background:rgba(168,255,62,.10)}
+.row button.save:hover{background:rgba(168,255,62,.22);box-shadow:0 0 20px rgba(168,255,62,.35)}
+.row button.warn{border-color:rgba(255,45,149,.6);color:var(--mg);
+  background:rgba(255,45,149,.10)}
+.row button.warn:hover{background:rgba(255,45,149,.22);box-shadow:0 0 20px rgba(255,45,149,.35)}
+.val{float:right;color:var(--cy);letter-spacing:.06em}
+.small{font-size:11px;letter-spacing:.06em;color:var(--dim);text-align:center;margin-top:10px}
+.saved{font-size:12px;letter-spacing:.08em;color:var(--lm)}
+/* servo location diagram */
+.droid{position:relative;width:100%;max-width:300px;margin:0 auto;
+  border-radius:14px;overflow:hidden;background:#02060b;
+  border:1px solid rgba(34,224,255,.35);
+  box-shadow:inset 0 0 40px rgba(34,224,255,.08),0 0 22px rgba(0,0,0,.6)}
+.droid img{width:100%;height:auto;display:block;
+  filter:brightness(.82) contrast(1.08) saturate(.8)}
+.droid .shade{position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(circle at 52% 42%,
+    rgba(2,6,11,0) 34%, rgba(2,6,11,.72) 100%)}
+.droid .srv{position:absolute;z-index:2;transform:translate(-50%,-50%);
+  width:26px;height:26px;padding:0;border-radius:50%;
+  border:2px solid var(--cy);background:rgba(4,14,24,.85);
+  color:var(--cy);font:700 12px ui-monospace,monospace;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;box-shadow:0 0 10px rgba(34,224,255,.35)}
+.droid .srv:hover,.droid .srv.active{background:var(--cy);color:#04121c;
+  box-shadow:0 0 18px rgba(34,224,255,.8)}
+.droid .srv.active{box-shadow:0 0 0 4px rgba(34,224,255,.3),0 0 18px rgba(34,224,255,.8)}
+.droid .srv.off{opacity:.3;cursor:default}
 </style>
 </head>
 <body>
-<h2>Servo Calibration</h2>
+<div class="hdr"><span><b>PIT DROID</b> // SERVO CALIBRATION</span><span>PCA9685</span></div>
 
 <div class="card">
   <label>Servo Locations</label>
@@ -138,11 +187,12 @@ const char CAL_HTML[] PROGMEM = R"rawliteral(
 
 <div class="card">
   <label>Saved values for this channel</label>
-  <div id="saved" style="font-size:14px; color:#ccc;">-</div>
+  <div id="saved" class="saved">-</div>
 </div>
 
 <div class="row">
-  <button onclick="location.href='/'">Back to Control</button>
+  <button class="alt" onclick="location.href='/'">Back to Control</button>
+  <button onclick="location.href='/control'">Manual Controller</button>
 </div>
 
 <script>
@@ -252,9 +302,9 @@ static bool channelCalibratable(int ch) {
 }
 
 void calibrationHandler() {
-  server.on("/cal", []() { server.send_P(200, "text/html", CAL_HTML); });
+  webRoute("/cal", []() { server.send_P(200, "text/html", CAL_HTML); });
 
-  server.on("/cal/channels", []() {
+  webRoute("/cal/channels", []() {
     String j = "[";
     bool first = true;
     for (uint8_t ch = 0; ch < 5; ch++) {
@@ -267,7 +317,7 @@ void calibrationHandler() {
     server.send(200, "application/json", j);
   });
 
-  server.on("/cal/values", []() {
+  webRoute("/cal/values", []() {
     int ch = server.hasArg("ch") ? server.arg("ch").toInt() : 0;
     if (!channelCalibratable(ch)) { server.send(400, "text/plain", "Channel not available"); return; }
     ServoCal c = calibrationGet(ch);
@@ -277,7 +327,7 @@ void calibrationHandler() {
     server.send(200, "application/json", j);
   });
 
-  server.on("/cal/pwm", []() {
+  webRoute("/cal/pwm", []() {
     int ch = server.arg("ch").toInt();
     if (!channelCalibratable(ch)) { server.send(400, "text/plain", "Channel not available"); return; }
     int v = constrain(server.arg("v").toInt(), 100, 700);
@@ -285,7 +335,7 @@ void calibrationHandler() {
     server.send(200, "text/plain", "OK");
   });
 
-  server.on("/cal/move", []() {
+  webRoute("/cal/move", []() {
     int ch = server.arg("ch").toInt();
     if (!channelCalibratable(ch)) { server.send(400, "text/plain", "Channel not available"); return; }
     String to = server.arg("to");
@@ -297,7 +347,7 @@ void calibrationHandler() {
     server.send(200, "text/plain", "OK");
   });
 
-  server.on("/cal/save", []() {
+  webRoute("/cal/save", []() {
     int ch = server.arg("ch").toInt();
     if (!channelCalibratable(ch)) { server.send(400, "text/plain", "Channel not available"); return; }
     String which = server.arg("which");
@@ -310,13 +360,58 @@ void calibrationHandler() {
     server.send(200, "text/plain", "OK");
   });
 
-  server.on("/cal/sweep", []() {
+  webRoute("/cal/sweep", []() {
     int ch = server.arg("ch").toInt();
     if (!channelCalibratable(ch)) { server.send(400, "text/plain", "Channel not available"); return; }
-    ServoCal c = calibrationGet(ch);
-    for (int v = c.minPwm; v <= c.maxPwm; v += 10) { pwm.setPWM(ch, 0, v); delay(30); }
-    for (int v = c.maxPwm; v >= c.minPwm; v -= 10) { pwm.setPWM(ch, 0, v); delay(30); }
-    pwm.setPWM(ch, 0, c.centerPwm);
+    calibrationSweepStart(ch);
     server.send(200, "text/plain", "OK");
   });
+}
+
+// ---------------------------------------------------------------------------
+// Non-blocking test sweep
+// ---------------------------------------------------------------------------
+static bool     sweepActive = false;
+static uint8_t  sweepCh     = 0;
+static uint8_t  sweepPhase  = 0;   // 0 = up, 1 = down
+static int      sweepValue  = 0;
+static uint32_t sweepLastMs = 0;
+
+void calibrationSweepStart(uint8_t ch) {
+  ServoCal c = calibrationGet(ch);
+  sweepCh     = ch;
+  sweepValue  = c.minPwm;
+  sweepPhase  = 0;
+  sweepActive = true;
+  sweepLastMs = millis();
+}
+
+bool calibrationSweeping() {
+  return sweepActive;
+}
+
+void calibrationUpdate() {
+  if (!sweepActive) return;
+
+  uint32_t now = millis();
+  if (now - sweepLastMs < 30) return;
+  sweepLastMs = now;
+
+  ServoCal c = calibrationGet(sweepCh);
+
+  if (sweepPhase == 0) {
+    sweepValue += 10;
+    if (sweepValue >= c.maxPwm) {
+      sweepValue = c.maxPwm;
+      sweepPhase = 1;
+    }
+  } else {
+    sweepValue -= 10;
+    if (sweepValue <= c.minPwm) {
+      sweepValue  = c.centerPwm;
+      sweepActive = false;
+    }
+  }
+
+  pwm.setPWM(sweepCh, 0, sweepValue);
 }

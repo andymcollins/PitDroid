@@ -5,58 +5,115 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pit Droid — LED Ring Preview</title>
 <style>
-  :root { color-scheme: dark; }
+  :root { --cy:#22e0ff; --mg:#ff2d95; --lm:#a8ff3e; --ink:#dff6ff; --dim:#6fa8c7; color-scheme:dark; }
   * { box-sizing: border-box; }
   body {
     margin: 0; min-height: 100vh;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    background: radial-gradient(circle at 50% 35%, #1a1d24 0%, #0a0b0e 70%);
-    color: #e8eaf0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    background: #04060c;
+    background-image: radial-gradient(1100px 520px at 50% -15%, #0e2338 0%, #04060c 62%);
+    background-attachment: fixed;
+    color: var(--ink);
     display: flex; flex-direction: column; align-items: center;
-    padding: 24px 16px 40px;
+    padding: 20px 16px 40px;
   }
-  h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; letter-spacing: .2px; }
-  .sub { color: #8b93a7; font-size: 13px; margin-bottom: 18px; }
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 99;
+    background: repeating-linear-gradient(0deg, rgba(180,240,255,.03) 0 1px, transparent 1px 3px);
+  }
+  h1 { font-size: 13px; font-weight: 600; margin: 0 0 6px; letter-spacing: .24em;
+       text-transform: uppercase; color: var(--cy);
+       text-shadow: 0 0 12px rgba(34,224,255,.55); }
+  .sub { color: var(--dim); font-size: 11px; letter-spacing: .1em; margin-bottom: 18px;
+         text-align: center; }
   .stage { position: relative; }
-  canvas { display: block; width: min(88vw, 560px); height: auto; }
+  canvas { display: block; width: min(88vw, 560px); height: auto;
+           border-radius: 18px; border: 1px solid rgba(34,224,255,.25);
+           background: radial-gradient(circle at 50% 40%, #071019 0%, #02060b 70%);
+           box-shadow: inset 0 0 60px rgba(34,224,255,.06), 0 0 28px rgba(0,0,0,.6); }
   .panel {
-    width: min(92vw, 560px); background: #151821; border: 1px solid #242938;
-    border-radius: 16px; padding: 16px; margin-top: 18px;
-    display: grid; gap: 14px;
+    position: relative; width: min(92vw, 560px);
+    background: linear-gradient(180deg, rgba(12,28,46,.92), rgba(4,8,14,.94));
+    border: 1px solid rgba(34,224,255,.28); border-radius: 18px;
+    box-shadow: inset 0 0 40px rgba(34,224,255,.06), 0 0 28px rgba(0,0,0,.55);
+    padding: 16px; margin-top: 18px; display: grid; gap: 14px;
   }
+  .panel::before, .panel::after {
+    content: ""; position: absolute; width: 14px; height: 14px;
+    border: 2px solid var(--cy); opacity: .5;
+  }
+  .panel::before { top: 7px; left: 7px; border-right: 0; border-bottom: 0; border-radius: 6px 0 0 0; }
+  .panel::after { bottom: 7px; right: 7px; border-left: 0; border-top: 0; border-radius: 0 0 6px 0; }
   .row { display: flex; align-items: center; gap: 12px; }
-  .row label { flex: 0 0 88px; font-size: 13px; color: #aab2c5; }
+  .row label { flex: 0 0 92px; font-size: 10px; letter-spacing: .18em;
+               text-transform: uppercase; color: var(--dim); }
   select, input[type=range] { width: 100%; }
   select {
-    background: #0d1017; color: #e8eaf0; border: 1px solid #2a3040;
-    border-radius: 10px; padding: 10px 12px; font-size: 15px;
+    background: #08121c; color: var(--ink); border: 1px solid rgba(34,224,255,.4);
+    border-radius: 10px; padding: 10px 12px; font-size: 13px;
+    font-family: inherit; letter-spacing: .08em; outline: none;
   }
-  input[type=range] { accent-color: #3d8bff; height: 28px; }
+  select:focus { border-color: var(--cy); box-shadow: 0 0 14px rgba(34,224,255,.3); }
+  input[type=range] {
+    -webkit-appearance: none; appearance: none; height: 26px;
+    background: transparent; margin: 0;
+  }
+  input[type=range]::-webkit-slider-runnable-track {
+    height: 8px; border-radius: 99px;
+    background: linear-gradient(90deg, rgba(34,224,255,.28), rgba(255,45,149,.28));
+    border: 1px solid rgba(34,224,255,.38);
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 18px; height: 18px; margin-top: -6px;
+    border-radius: 5px; border: 1px solid #eaffff;
+    background: linear-gradient(180deg, #c9fbff, #22e0ff);
+    box-shadow: 0 0 12px rgba(34,224,255,.85);
+  }
+  input[type=range]::-moz-range-track {
+    height: 8px; border-radius: 99px;
+    background: linear-gradient(90deg, rgba(34,224,255,.28), rgba(255,45,149,.28));
+    border: 1px solid rgba(34,224,255,.38);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 18px; height: 18px; border-radius: 5px; border: 1px solid #eaffff;
+    background: #22e0ff; box-shadow: 0 0 12px rgba(34,224,255,.85);
+  }
   input[type=color] {
-    width: 100%; height: 42px; border: 1px solid #2a3040; border-radius: 10px;
-    background: #0d1017; padding: 3px; cursor: pointer;
+    width: 100%; height: 42px; border: 1px solid rgba(34,224,255,.4);
+    border-radius: 10px; background: #08121c; padding: 4px; cursor: pointer;
   }
-  .value { flex: 0 0 40px; text-align: right; font-variant-numeric: tabular-nums;
-           color: #7fb0ff; font-size: 13px; }
+  .value { flex: 0 0 44px; text-align: right; font-variant-numeric: tabular-nums;
+           color: var(--cy); font-size: 12px; letter-spacing: .06em; }
   .btns { display: flex; gap: 10px; }
   button {
-    flex: 1; border: 0; border-radius: 11px; padding: 12px;
-    font-size: 14px; font-weight: 600; color: #fff; background: #2b62d9;
-    cursor: pointer;
+    flex: 1; padding: 12px; font-size: 10px; font-family: inherit;
+    letter-spacing: .16em; text-transform: uppercase; color: var(--ink);
+    cursor: pointer; border: 1px solid rgba(34,224,255,.55); border-radius: 10px;
+    background: linear-gradient(180deg, rgba(34,224,255,.16), rgba(34,224,255,.04));
+    box-shadow: 0 0 14px rgba(34,224,255,.14), inset 0 0 12px rgba(34,224,255,.06);
+    transition: background .15s, box-shadow .15s, transform .06s;
   }
-  button.secondary { background: #262c3a; color: #cfd6e6; }
+  button:hover { background: rgba(34,224,255,.26); box-shadow: 0 0 22px rgba(34,224,255,.4); }
   button:active { transform: translateY(1px); }
-  .legend { display: flex; justify-content: center; gap: 18px;
-            color: #6f7890; font-size: 12px; margin-top: 10px; }
-  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%;
-         background: #3d8bff; margin-right: 6px; vertical-align: 1px; }
-  .backbar { width: min(92vw, 560px); display: flex; justify-content: flex-start; }
-  .backbar a {
-    color: #9fb4d8; text-decoration: none; font-size: 14px; font-weight: 600;
-    padding: 8px 14px; border: 1px solid #2a3040; border-radius: 10px;
-    background: #151821;
+  button.secondary {
+    border-color: rgba(111,168,199,.4); color: var(--dim);
+    background: rgba(111,168,199,.08); box-shadow: none;
   }
-  .backbar a:hover { color: #e8eaf0; border-color: #3d8bff; }
+  .legend { display: flex; justify-content: center; gap: 18px;
+            color: var(--dim); font-size: 11px; letter-spacing: .12em;
+            text-transform: uppercase; margin-top: 12px; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+         background: var(--lm); margin-right: 6px; vertical-align: 1px;
+         box-shadow: 0 0 10px rgba(168,255,62,.8); }
+  .backbar { width: min(92vw, 560px); display: flex; justify-content: flex-start;
+             margin-bottom: 16px; }
+  .backbar a {
+    color: var(--mg); text-decoration: none; font-size: 10px; font-weight: 600;
+    letter-spacing: .18em; text-transform: uppercase;
+    padding: 8px 14px; border: 1px solid rgba(255,45,149,.5); border-radius: 10px;
+    box-shadow: 0 0 14px rgba(255,45,149,.2);
+  }
+  .backbar a:hover { color: #fff; border-color: var(--mg); box-shadow: 0 0 20px rgba(255,45,149,.45); }
 </style>
 </head>
 <body>

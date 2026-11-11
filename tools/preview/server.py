@@ -26,8 +26,9 @@ state = {
     "brightness": 80,
     "led": (0, 0, 255),
     "anim": {"mode": 0, "speed": 50},
-    "servo": {ch: 90 for ch in CHANNELS},
+    "servo": {0: 90, 1: 90, 2: 0, 3: 0, 4: 90},
     "cal": {ch: {"min": 150, "ctr": 375, "max": 600} for ch in CHANNELS},
+    "sim": {"angle": 0.0, "dist": 1500, "active": False},
 }
 
 
@@ -46,6 +47,8 @@ def extract_raw(path: Path, name: str) -> str:
 
 INDEX_HTML = extract_raw(ROOT / "web_page.h", "INDEX_HTML")
 CAL_HTML = extract_raw(ROOT / "calibration.cpp", "CAL_HTML")
+RADAR_HTML = extract_raw(ROOT / "radar_test.cpp", "RADAR_HTML")
+CONTROLLER_HTML = extract_raw(ROOT / "controller.cpp", "CONTROLLER_HTML")
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -76,12 +79,71 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/cal":
             return self._send(CAL_HTML)
 
+        if path == "/radar":
+            return self._send(RADAR_HTML)
+
+        if path == "/control":
+            return self._send(CONTROLLER_HTML)
+
+        if path == "/radar/target":
+            try:
+                angle = float(a.get("angle", 0))
+                dist = int(float(a.get("dist", 1500)))
+            except ValueError:
+                return self._send("Bad target", "text/plain", 400)
+            state["sim"]["angle"] = max(-60.0, min(60.0, angle))
+            state["sim"]["dist"] = max(100, min(4000, dist))
+            state["sim"]["active"] = a.get("active", "0") == "1"
+            if state["sim"]["active"]:
+                state["mode"] = "auto"
+            print(
+                f"[radar/target] angle={state['sim']['angle']:.1f} "
+                f"dist={state['sim']['dist']} active={state['sim']['active']}"
+            )
+            return self._send("OK", "text/plain")
+
+        if path == "/radar/state":
+            # Emulate the tracking loop so the test page shows servo motion.
+            if state["mode"] == "auto" and state["sim"]["active"]:
+                target_pan = 90 + state["sim"]["angle"] * 0.9
+                pan = state["servo"][0]
+                if abs(target_pan - pan) > 5:
+                    pan += 2 if target_pan > pan else -2
+                    state["servo"][0] = int(round(max(0, min(180, pan))))
+
+                d = max(200, min(3000, state["sim"]["dist"]))
+                target_tilt = 120 + (d - 200) * (60 - 120) / (3000 - 200)
+                tilt = state["servo"][1]
+                if abs(target_tilt - tilt) >= 1:
+                    tilt += 1 if target_tilt > tilt else -1
+                    state["servo"][1] = int(round(max(0, min(180, tilt))))
+
+            return self._send(
+                json.dumps({"pan": state["servo"][0], "tilt": state["servo"][1]}),
+                "application/json",
+            )
+
         if path == "/servo":
             ch = int(a.get("ch", 0))
             angle = max(0, min(180, int(a.get("angle", 90))))
             state["servo"][ch] = angle
+            state["mode"] = "manual"
             print(f"[servo] ch={ch} ({CHANNELS.get(ch, '?')}) angle={angle}")
             return self._send("OK", "text/plain")
+
+        if path == "/servo/angles":
+            return self._send(
+                json.dumps(
+                    {
+                        "pan": state["servo"][0],
+                        "tilt": state["servo"][1],
+                        "armL": state["servo"][2],
+                        "armR": state["servo"][3],
+                        "hip": state["servo"][4],
+                    }
+                ),
+                "application/json",
+            )
 
         if path == "/led":
             rgb = tuple(max(0, min(255, int(a.get(k, 0)))) for k in ("r", "g", "b"))
@@ -125,8 +187,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(json.dumps([0, 1, 2, 3, 4]), "application/json")
 
         if path == "/servo/channels":
-            # Mirrors SERVO_PRESENT_MASK: Pan (CH0) + Tilt (CH1) drive motion.
-            return self._send(json.dumps([0, 1]), "application/json")
+            # Mirrors SERVO_PRESENT_MASK: all five channels drive motion.
+            return self._send(json.dumps([0, 1, 2, 3, 4]), "application/json")
 
         if path == "/cal/pwm":
             ch = int(a.get("ch", 0))

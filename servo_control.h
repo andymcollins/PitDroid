@@ -4,5 +4,10 @@
 
 extern Adafruit_PWMServoDriver pwm;
 void setServoAngle(uint8_t channel, int angle);
-void setServoPwm(uint8_t channel, int pwm);
-void startupAnimation();
+void setServoPwm(uint8_t channel, int pwmVal);
+
+// Non-blocking startup animation: begin() starts it, update() must be called
+// from loop().
+void startupAnimationBegin();
+void startupAnimationUpdate();
+bool startupAnimationRunning();

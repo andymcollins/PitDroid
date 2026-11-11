@@ -21,7 +21,7 @@
 // All five PCA9685 channels stay defined, but only the bits set here are
 // treated as physically connected for motion. The UI and motion code skip
 // the rest. bit0 = Pan, bit1 = Tilt, bit2 = Arm L, bit3 = Arm R, bit4 = Hip.
-#define SERVO_PRESENT_MASK 0x03   // 0x03 = Pan + Tilt only
+#define SERVO_PRESENT_MASK 0x1F   // 0x1F = Pan + Tilt + Arm L + Arm R + Hip
 #define SERVO_PRESENT(ch)  (((SERVO_PRESENT_MASK) >> (ch)) & 0x01)
 
 // Channels shown on the calibration page. Default is all five so the arm and
@@ -38,10 +38,24 @@
 
 // ---- Behaviour ----
 #define TRACK_DEADZONE_DEG   5
-#define TRACK_TIMEOUT_MS   2000
+#define TRACK_TIMEOUT_MS   2000   // hold last target this long before idling
+#define TRACK_INTERVAL_MS    30   // radar/tracking update period
 #define ARM_RAISE_DIST_MM   800
 #define HIP_FOLLOW_FACTOR   0.3f
 
-enum Mode { AUTO, IDLE };
+// Idle sweep. Reverses at the limits instead of snapping back.
+#define SWEEP_MIN_DEG        45
+#define SWEEP_MAX_DEG       135
+#define SWEEP_STEP_DEG        2
+#define SWEEP_INTERVAL_MS    40
+
+// ---- Web authentication ----
+// Leave both empty to disable. Set to a non-empty user/password to require
+// HTTP basic auth on every route (the browser will prompt once).
+#define WEB_AUTH_USER ""
+#define WEB_AUTH_PASS ""
+
+enum Mode { AUTO, IDLE, MANUAL };
 extern Mode mode;
 extern int panAngle, tiltAngle, armAngle, hipAngle;
+extern int armLAngle, armRAngle;
