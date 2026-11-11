@@ -142,6 +142,88 @@ static void renderRings() {
   }
 }
 
+// Every pixel picks a new random hue each frame.
+static void renderRandom() {
+  for (int i = 0; i < LED_COUNT; i++) {
+    buf[i] = hsv((uint16_t)random(65536), 255, 255);
+  }
+}
+
+// Classic fire simulation: heat rises along the strip, cools and flickers.
+static void renderFire() {
+  static uint8_t heat[LED_COUNT];
+  for (int i = 0; i < LED_COUNT; i++) {
+    uint8_t cool = (uint8_t)random(60);
+    heat[i] = (heat[i] > cool) ? heat[i] - cool : 0;
+  }
+  for (int i = LED_COUNT - 1; i >= 2; i--) {
+    heat[i] = (uint8_t)(((uint16_t)heat[i - 1] + heat[i - 2] + heat[i - 2]) / 3);
+  }
+  if (random(100) < 60) {
+    int y = (int)random(3);
+    int v = heat[y] + 160 + (int)random(96);
+    heat[y] = (uint8_t)(v > 255 ? 255 : v);
+  }
+  for (int i = 0; i < LED_COUNT; i++) {
+    uint8_t t = heat[i];
+    if (t < 85)       buf[i] = rgb(t * 3, 0, 0);
+    else if (t < 170) buf[i] = rgb(255, (t - 85) * 3, 0);
+    else              buf[i] = rgb(255, 255, (t - 170) * 3);
+  }
+}
+
+// Base colour fills the strip, then drains from the far end.
+static void renderWipe() {
+  int cycle = LED_COUNT + 6;
+  int p = frame % (cycle * 2);
+  int len = (p < cycle) ? p : (cycle * 2 - p);
+  if (len > LED_COUNT) len = LED_COUNT;
+  uint32_t c = rgb(baseR, baseG, baseB);
+  for (int i = 0; i < LED_COUNT; i++) {
+    buf[i] = (i < len) ? c : 0;
+  }
+}
+
+// Double-thump heartbeat in the base colour.
+static void renderPulse() {
+  uint32_t p = frame % 48;
+  uint8_t level;
+  if (p < 4)        level = (uint8_t)(80 + p * 44);
+  else if (p < 10)  level = (uint8_t)(255 - (p - 4) * 30);
+  else if (p < 14)  level = (uint8_t)(60 + (p - 10) * 40);
+  else if (p < 22)  level = (uint8_t)(220 - (p - 14) * 26);
+  else              level = 12;
+  uint32_t c = scaleColor(rgb(baseR, baseG, baseB), level);
+  for (int i = 0; i < LED_COUNT; i++) buf[i] = c;
+}
+
+// Comet whose tail cycles through the full rainbow.
+static void renderRainbowComet() {
+  const uint8_t tail = 10;
+  int pos = frame % LED_COUNT;
+  for (int i = 0; i < LED_COUNT; i++) {
+    int d = (pos - i + LED_COUNT) % LED_COUNT;
+    if (d < tail) {
+      uint16_t hue = (uint16_t)(frame * 512UL + (uint32_t)i * 1024UL);
+      uint8_t level = (uint8_t)(255 - d * 255 / tail);
+      buf[i] = scaleColor(hsv(hue, 255, 255), level);
+    } else {
+      buf[i] = 0;
+    }
+  }
+}
+
+// Two base-colour dots chase in opposite directions.
+static void renderDualChase() {
+  uint32_t dim = scaleColor(rgb(baseR, baseG, baseB), 16);
+  for (int i = 0; i < LED_COUNT; i++) buf[i] = dim;
+  int a = frame % LED_COUNT;
+  int b = (LED_COUNT - 1) - a;
+  uint32_t c = rgb(baseR, baseG, baseB);
+  buf[a] = c;
+  buf[b] = c;
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -170,6 +252,12 @@ void ledUpdate() {
     case LED_SCANNER: renderScanner(); break;
     case LED_THEATER: renderTheater(); break;
     case LED_RINGS:   renderRings();   break;
+    case LED_RANDOM:  renderRandom();  break;
+    case LED_FIRE:    renderFire();    break;
+    case LED_WIPE:    renderWipe();    break;
+    case LED_PULSE:   renderPulse();   break;
+    case LED_RAINBOW_COMET: renderRainbowComet(); break;
+    case LED_DUAL_CHASE:    renderDualChase();    break;
     default:          renderSolid();   break;
   }
 

@@ -142,6 +142,12 @@
       <option value="6">Scanner (Knight Rider)</option>
       <option value="7">Theater Chase</option>
       <option value="8">Ring Cycle</option>
+      <option value="9">Random</option>
+      <option value="10">Fire</option>
+      <option value="11">Colour Wipe</option>
+      <option value="12">Heartbeat Pulse</option>
+      <option value="13">Rainbow Comet</option>
+      <option value="14">Dual Chase</option>
     </select>
   </div>
   <div class="row">
@@ -197,7 +203,7 @@ const ui = {
   frameInfo: document.getElementById('frameInfo'),
 };
 
-const MODE_NAMES = ['Solid','Rainbow','Chase','Comet','Breathe','Sparkle','Scanner','Theater','Ring Cycle'];
+const MODE_NAMES = ['Solid','Rainbow','Chase','Comet','Breathe','Sparkle','Scanner','Theater','Ring Cycle','Random','Fire','Colour Wipe','Heartbeat Pulse','Rainbow Comet','Dual Chase'];
 let mode = 1, speed = 50, brightness = 200;
 let base = hexToRgb(ui.color.value);
 let frame = 0, playing = true, last = 0, buf = new Array(N).fill(0);
@@ -287,6 +293,76 @@ function renderRings() {
   }
 }
 
+// ---- extended patterns ----
+function renderRandom() {
+  for (let i = 0; i < N; i++) buf[i] = hsv(Math.floor(Math.random() * 65536), 255, 255);
+}
+
+const fireHeat = new Array(N).fill(0);
+function renderFire() {
+  for (let i = 0; i < N; i++) {
+    const cool = Math.floor(Math.random() * 60);
+    fireHeat[i] = Math.max(0, fireHeat[i] - cool);
+  }
+  for (let i = N - 1; i >= 2; i--) {
+    fireHeat[i] = Math.floor((fireHeat[i - 1] + fireHeat[i - 2] + fireHeat[i - 2]) / 3);
+  }
+  if (Math.random() * 100 < 60) {
+    const y = Math.floor(Math.random() * 3);
+    fireHeat[y] = Math.min(255, fireHeat[y] + 160 + Math.floor(Math.random() * 96));
+  }
+  for (let i = 0; i < N; i++) {
+    const t = fireHeat[i];
+    if (t < 85) buf[i] = rgb(t * 3, 0, 0);
+    else if (t < 170) buf[i] = rgb(255, (t - 85) * 3, 0);
+    else buf[i] = rgb(255, 255, (t - 170) * 3);
+  }
+}
+
+function renderWipe() {
+  const cycle = N + 6;
+  const p = frame % (cycle * 2);
+  let len = p < cycle ? p : cycle * 2 - p;
+  if (len > N) len = N;
+  const c = rgb(...base);
+  for (let i = 0; i < N; i++) buf[i] = i < len ? c : 0;
+}
+
+function renderPulse() {
+  const p = frame % 48;
+  let level;
+  if (p < 4) level = 80 + p * 44;
+  else if (p < 10) level = 255 - (p - 4) * 30;
+  else if (p < 14) level = 60 + (p - 10) * 40;
+  else if (p < 22) level = 220 - (p - 14) * 26;
+  else level = 12;
+  const c = scaleColor(rgb(...base), level);
+  for (let i = 0; i < N; i++) buf[i] = c;
+}
+
+function renderRainbowComet() {
+  const tail = 10, pos = frame % N;
+  for (let i = 0; i < N; i++) {
+    const d = (pos - i + N) % N;
+    if (d < tail) {
+      const hue = (frame * 512 + i * 1024) & 0xFFFF;
+      const level = 255 - Math.floor(d * 255 / tail);
+      buf[i] = scaleColor(hsv(hue, 255, 255), level);
+    } else {
+      buf[i] = 0;
+    }
+  }
+}
+
+function renderDualChase() {
+  const dim = scaleColor(rgb(...base), 16);
+  for (let i = 0; i < N; i++) buf[i] = dim;
+  const a = frame % N, b = (N - 1) - a;
+  const c = rgb(...base);
+  buf[a] = c;
+  buf[b] = c;
+}
+
 function renderFrame() {
   switch (mode) {
     case 1: renderRainbow(); break;
@@ -297,6 +373,12 @@ function renderFrame() {
     case 6: renderScanner(); break;
     case 7: renderTheater(); break;
     case 8: renderRings(); break;
+    case 9: renderRandom(); break;
+    case 10: renderFire(); break;
+    case 11: renderWipe(); break;
+    case 12: renderPulse(); break;
+    case 13: renderRainbowComet(); break;
+    case 14: renderDualChase(); break;
     default: renderSolid(); break;
   }
   draw();
@@ -391,7 +473,8 @@ ui.speed.addEventListener('input', () => {
 });
 ui.color.addEventListener('input', () => {
   base = hexToRgb(ui.color.value);
-  if (mode === 0 || mode === 2 || mode === 3 || mode === 4 || mode === 6 || mode === 7) renderFrame();
+  if (mode === 0 || mode === 2 || mode === 3 || mode === 4 || mode === 6 || mode === 7 ||
+      mode === 11 || mode === 12 || mode === 14) renderFrame();
 });
 ui.bri.addEventListener('input', () => {
   brightness = parseInt(ui.bri.value, 10);

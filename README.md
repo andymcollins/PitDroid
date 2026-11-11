@@ -62,6 +62,13 @@ pan/tilt, vertical sliders for each arm, and a horizontal hip slider. Every
 input posts to `/servo?ch=&angle=` and switches the droid to Manual. The page
 shows a rotate-to-landscape overlay when the device is held portrait.
 
+## LED animations
+
+`/` and `/preview` expose 15 patterns: Solid, Rainbow, Chase, Comet, Breathe,
+Sparkle, Scanner, Theater Chase, Ring Cycle, Random, Fire, Colour Wipe,
+Heartbeat Pulse, Rainbow Comet and Dual Chase. Speed maps 1-100 to a 200-10 ms
+frame interval; brightness is a global NeoPixel scale.
+
 ## Radar
 
 `radar.cpp` parses the RD-03D multi-target frame (`AA FF 03 00`, three 8-byte

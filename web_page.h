@@ -96,6 +96,12 @@ input[type=color]{width:100%;height:50px;border:1px solid rgba(34,224,255,.4);
     <option value="6">Scanner (Knight Rider)</option>
     <option value="7">Theater Chase</option>
     <option value="8">Ring Cycle</option>
+    <option value="9">Random</option>
+    <option value="10">Fire</option>
+    <option value="11">Colour Wipe</option>
+    <option value="12">Heartbeat Pulse</option>
+    <option value="13">Rainbow Comet</option>
+    <option value="14">Dual Chase</option>
   </select>
   <label style="margin-top:16px">Speed <span class="val" id="spdVal">50</span></label>
   <input type="range" min="1" max="100" value="50" id="spd"
