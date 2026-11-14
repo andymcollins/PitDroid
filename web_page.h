@@ -102,12 +102,20 @@ input[type=color]{width:100%;height:50px;border:1px solid rgba(34,224,255,.4);
     <option value="12">Heartbeat Pulse</option>
     <option value="13">Rainbow Comet</option>
     <option value="14">Dual Chase</option>
+    <option value="15">Warning Pulse</option>
+    <option value="16">Alert Flash</option>
+    <option value="17">Talking</option>
+    <option value="18">Thinking</option>
+    <option value="19">Sleep</option>
+    <option value="20">Happy</option>
+    <option value="21">Radar Scan</option>
   </select>
   <label style="margin-top:16px">Speed <span class="val" id="spdVal">50</span></label>
   <input type="range" min="1" max="100" value="50" id="spd"
          oninput="document.getElementById('spdVal').innerText=this.value">
   <button onclick="applyAnim()" style="margin-top:14px">Apply Animation</button>
   <button onclick="fetch('/led/auto')">Auto Status Colours</button>
+  <button onclick="fetch('/talk?ms=2000')">Talk (2 s)</button>
 </div>
 
 <div class="card">
@@ -123,16 +131,10 @@ input[type=color]{width:100%;height:50px;border:1px solid rgba(34,224,255,.4);
   <button onclick="fetch('/animate')">Replay Startup Animation</button>
   <button onclick="location.href='/cal'">Servo Calibration</button>
   <button onclick="location.href='/radar'">Radar Test</button>
-  <button id="previewBtn" style="display:none" onclick="location.href='/preview'">LED Ring Preview</button>
+  <button onclick="location.href='/preview'">LED Ring Preview</button>
 </div>
 
 <script>
-// The ring preview is a simulator served by tools/preview/server.py, so the
-// link is only shown when this page is opened from the local preview server.
-if (location.hostname === '127.0.0.1' || location.hostname === 'localhost') {
-  document.getElementById('previewBtn').style.display = 'block';
-}
-
 const SERVO_NAMES = {0:'Pan', 1:'Tilt', 2:'Arm L', 3:'Arm R', 4:'Hip'};
 async function buildServoSliders() {
   const box = document.getElementById('servoSliders');

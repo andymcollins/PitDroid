@@ -26,7 +26,8 @@ pan/tilt servos via PCA9685, with 3 chained NeoPixel rings in the eye
 2. Upload to ESP32 Dev Module.
 3. Open Serial Monitor at 115200 for IP.
 4. On iPhone, open `http://<ip>/` for control, `/control` for the landscape
-   manual controller, `/cal` for calibration, `/radar` for the radar test.
+   manual controller, `/cal` for calibration, `/radar` for the radar test and
+   `/preview` for the LED ring simulator.
 
 ## Servo Calibration
 
@@ -64,10 +65,27 @@ shows a rotate-to-landscape overlay when the device is held portrait.
 
 ## LED animations
 
-`/` and `/preview` expose 15 patterns: Solid, Rainbow, Chase, Comet, Breathe,
+`/` and `/preview` expose 22 patterns: Solid, Rainbow, Chase, Comet, Breathe,
 Sparkle, Scanner, Theater Chase, Ring Cycle, Random, Fire, Colour Wipe,
-Heartbeat Pulse, Rainbow Comet and Dual Chase. Speed maps 1-100 to a 200-10 ms
-frame interval; brightness is a global NeoPixel scale.
+Heartbeat Pulse, Rainbow Comet, Dual Chase, Warning Pulse, Alert Flash, Talking,
+Thinking, Sleep, Happy and Radar Scan. Speed maps 1-100 to a 200-10 ms frame
+interval; brightness is a global NeoPixel scale.
+
+The last seven are semantic status patterns used by the firmware:
+
+- **Warning Pulse** — slow red pulse in and out, never fully dark. Auto tracking
+  switches to this when the nearest target is closer than `WARN_DIST_MM`
+  (600 mm); otherwise the ring shows solid green.
+- **Alert Flash** — urgent double-flash red.
+- **Talking** — random speech-like bars in the base colour. `/talk?ms=2000`
+  temporarily forces this mode, then restores the previous mode and manual
+  state when the timer expires.
+- **Thinking** — amber chase. **Sleep** — dim blue breathing. **Happy** — lime
+  sparkle burst. **Radar Scan** — ring-by-ring cyan sweep, shown during the idle
+  pan sweep.
+
+`/preview` is a browser canvas that simulates the 52-LED rings using the same
+pattern maths; it is not a readback of the physical strip.
 
 ## Radar
 
@@ -84,8 +102,8 @@ to require HTTP basic auth on every route; the browser prompts once.
 ## Local preview
 
 `tools/preview/server.py` mocks every endpoint in memory and reads the HTML out
-of `web_page.h`, `calibration.cpp`, `radar_test.cpp` and `controller.cpp` at
-startup, so restart it after editing any of those files:
+of `web_page.h`, `calibration.cpp`, `radar_test.cpp`, `controller.cpp` and
+`leds_page.h` at startup, so restart it after editing any of those files:
 
 ```bash
 python3 tools/preview/server.py --port 8765

@@ -7,6 +7,10 @@ static uint8_t  ledMode    = LED_SOLID;
 static uint8_t  ledSpeed   = 50;
 static uint8_t  baseR = 0, baseG = 0, baseB = 255;
 static bool     manualMode = false;
+static bool     talking    = false;
+static uint32_t talkUntilMs = 0;
+static uint8_t  talkReturnMode = LED_SOLID;
+static bool     talkReturnManual = false;
 
 static uint32_t lastFrameMs = 0;
 static uint32_t frame       = 0;
@@ -224,6 +228,81 @@ static void renderDualChase() {
   buf[b] = c;
 }
 
+// Red warning: slow pulse in and out, never fully dark.
+static void renderWarning() {
+  uint32_t p = frame % 80;
+  uint8_t level = (p < 40) ? (uint8_t)(p * 255 / 40)
+                           : (uint8_t)((80 - p) * 255 / 40);
+  if (level < 24) level = 24;
+  uint32_t c = scaleColor(rgb(255, 0, 0), level);
+  for (int i = 0; i < LED_COUNT; i++) buf[i] = c;
+}
+
+// Urgent double-flash red.
+static void renderAlert() {
+  uint32_t p = frame % 20;
+  bool on = (p < 3) || (p >= 7 && p < 10);
+  uint32_t c = on ? rgb(255, 0, 0) : rgb(24, 0, 0);
+  for (int i = 0; i < LED_COUNT; i++) buf[i] = c;
+}
+
+// Speech-like chatter: random bars of base colour over a dim background.
+static void renderTalk() {
+  uint32_t base = rgb(baseR, baseG, baseB);
+  for (int i = 0; i < LED_COUNT; i++) buf[i] = scaleColor(base, 10);
+  int bars = 3 + (int)random(4);
+  for (int b = 0; b < bars; b++) {
+    int start = (int)random(LED_COUNT);
+    int len = 2 + (int)random(6);
+    uint8_t level = (uint8_t)(140 + random(116));
+    for (int k = 0; k < len; k++) {
+      int i = (start + k) % LED_COUNT;
+      buf[i] = scaleColor(base, level);
+    }
+  }
+}
+
+// Amber "thinking" chase.
+static void renderThink() {
+  for (int i = 0; i < LED_COUNT; i++) buf[i] = scaleColor(rgb(255, 120, 0), 18);
+  int pos = frame % LED_COUNT;
+  for (int k = 0; k < 7; k++) {
+    int i = (pos + k) % LED_COUNT;
+    uint8_t level = (uint8_t)(255 - k * 32);
+    buf[i] = scaleColor(rgb(255, 170, 0), level);
+  }
+}
+
+// Dim blue breathing for idle/sleep.
+static void renderSleep() {
+  uint32_t p = frame % 160;
+  uint8_t level = (p < 80) ? (uint8_t)(16 + p * 64 / 80)
+                           : (uint8_t)(16 + (160 - p) * 64 / 80);
+  uint32_t c = scaleColor(rgb(0, 30, 255), level);
+  for (int i = 0; i < LED_COUNT; i++) buf[i] = c;
+}
+
+// Lime sparkle burst.
+static void renderHappy() {
+  for (int i = 0; i < LED_COUNT; i++) buf[i] = scaleColor(rgb(140, 255, 0), 24);
+  for (int n = 0; n < 6; n++) {
+    int i = (int)random(LED_COUNT);
+    buf[i] = rgb(190, 255, 60);
+  }
+}
+
+// Radar-style sweep: outer ring, then middle, then inner.
+static void renderScan() {
+  int phase = frame % 90;
+  int active = phase / 30;
+  for (int i = 0; i < LED_COUNT; i++) {
+    int ring = (i < RING_START[1]) ? 0 : (i < RING_START[2] ? 1 : 2);
+    if (ring == active)        buf[i] = rgb(0, 200, 255);
+    else if (ring < active)    buf[i] = scaleColor(rgb(0, 200, 255), 60);
+    else                       buf[i] = 0;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -237,6 +316,13 @@ void ledBegin() {
 }
 
 void ledUpdate() {
+  // End a temporary talk animation and restore whatever was running before.
+  if (talking && (int32_t)(millis() - talkUntilMs) >= 0) {
+    talking = false;
+    ledMode = talkReturnMode;
+    manualMode = talkReturnManual;
+  }
+
   uint16_t interval = map(ledSpeed, 1, 100, 200, 10);
   uint32_t now = millis();
   if (now - lastFrameMs < interval) return;
@@ -258,6 +344,13 @@ void ledUpdate() {
     case LED_PULSE:   renderPulse();   break;
     case LED_RAINBOW_COMET: renderRainbowComet(); break;
     case LED_DUAL_CHASE:    renderDualChase();    break;
+    case LED_WARNING: renderWarning(); break;
+    case LED_ALERT:   renderAlert();   break;
+    case LED_TALK:    renderTalk();    break;
+    case LED_THINK:   renderThink();   break;
+    case LED_SLEEP:   renderSleep();   break;
+    case LED_HAPPY:   renderHappy();   break;
+    case LED_SCAN:    renderScan();    break;
     default:          renderSolid();   break;
   }
 
@@ -272,12 +365,14 @@ void ledSetColor(uint8_t r, uint8_t g, uint8_t b) {
   baseR = r; baseG = g; baseB = b;
   ledMode = LED_SOLID;
   manualMode = true;
+  talking = false;
 }
 
 void ledSetMode(uint8_t mode) {
   if (mode < LED_MODE_COUNT) {
     ledMode = mode;
     manualMode = true;
+    talking = false;
   }
 }
 
@@ -291,9 +386,24 @@ void ledSetBrightness(uint8_t brightness) {
 }
 
 void ledSetStatus(uint8_t r, uint8_t g, uint8_t b) {
-  if (manualMode) return;
+  if (manualMode || talking) return;
   baseR = r; baseG = g; baseB = b;
   ledMode = LED_SOLID;
+}
+
+void ledSetStatusEffect(uint8_t mode) {
+  if (manualMode || talking) return;
+  if (mode < LED_MODE_COUNT) ledMode = mode;
+}
+
+void ledTalk(uint16_t ms) {
+  if (!talking) {
+    talkReturnMode = ledMode;
+    talkReturnManual = manualMode;
+    talking = true;
+  }
+  talkUntilMs = millis() + ms;
+  ledMode = LED_TALK;
 }
 
 void ledAuto() {

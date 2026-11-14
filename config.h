@@ -42,6 +42,7 @@
 #define TRACK_INTERVAL_MS    30   // radar/tracking update period
 #define ARM_RAISE_DIST_MM   800
 #define HIP_FOLLOW_FACTOR   0.3f
+#define WARN_DIST_MM        600   // closer than this = red warning pulse
 
 // Idle sweep. Reverses at the limits instead of snapping back.
 #define SWEEP_MIN_DEG        45

@@ -9,6 +9,7 @@
 #include "servo_control.h"
 #include "radar.h"
 #include "leds.h"
+#include "leds_page.h"
 #include "calibration.h"
 #include "radar_test.h"
 #include "controller.h"
@@ -43,7 +44,7 @@ static void idleSweep() {
   else if (panAngle <= SWEEP_MIN_DEG) { panAngle = SWEEP_MIN_DEG; sweepDir = 1; }
 
   if (SERVO_PRESENT(CH_PAN)) setServoAngle(CH_PAN, panAngle);
-  ledSetStatus(0, 0, 255);
+  ledSetStatusEffect(LED_SCAN);
 }
 
 static void autoTrack() {
@@ -92,7 +93,9 @@ static void autoTrack() {
   hipAngle = constrain(90 + (int)(t.angleDeg * HIP_FOLLOW_FACTOR), 60, 120);
   if (SERVO_PRESENT(CH_HIP)) setServoAngle(CH_HIP, hipAngle);
 
-  ledSetStatus(0, 255, 0);
+  // Close target = red warning pulse; otherwise the normal tracking colour.
+  if (t.distanceMm < WARN_DIST_MM) ledSetStatusEffect(LED_WARNING);
+  else ledSetStatus(0, 255, 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -125,6 +128,7 @@ void setup() {
   Serial.print("IP: "); Serial.println(WiFi.localIP());
 
   webRoute("/", []() { server.send_P(200, "text/html", INDEX_HTML); });
+  webRoute("/preview", []() { server.send_P(200, "text/html", LEDS_HTML); });
 
   webRoute("/servo", []() {
     if (!server.hasArg("ch") || !server.hasArg("angle")) {
@@ -184,6 +188,14 @@ void setup() {
   });
 
   webRoute("/led/auto", []() { ledAuto(); server.send(200, "text/plain", "OK"); });
+
+  webRoute("/talk", []() {
+    uint16_t ms = server.hasArg("ms")
+                    ? (uint16_t)constrain(server.arg("ms").toInt(), 100, 10000)
+                    : 1500;
+    ledTalk(ms);
+    server.send(200, "text/plain", "OK");
+  });
 
   webRoute("/brightness", []() {
     if (!server.hasArg("value")) {

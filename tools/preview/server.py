@@ -2,9 +2,10 @@
 """
 Local preview server for the PitDroid web UI.
 
-It reads INDEX_HTML from web_page.h and CAL_HTML from calibration.cpp at
-startup, so the preview always matches the firmware. All ESP32 endpoints are
-mocked in memory and every request is logged to the console.
+It extracts the page HTML from web_page.h, calibration.cpp, radar_test.cpp,
+controller.cpp and leds_page.h at startup, so the preview always matches the
+firmware. All ESP32 endpoints are mocked in memory and every request is logged
+to the console.
 
 Usage:
     python3 tools/preview/server.py [--port 8765]
@@ -26,6 +27,7 @@ state = {
     "brightness": 80,
     "led": (0, 0, 255),
     "anim": {"mode": 0, "speed": 50},
+    "talk": 0,
     "servo": {0: 90, 1: 90, 2: 0, 3: 0, 4: 90},
     "cal": {ch: {"min": 150, "ctr": 375, "max": 600} for ch in CHANNELS},
     "sim": {"angle": 0.0, "dist": 1500, "active": False},
@@ -49,6 +51,7 @@ INDEX_HTML = extract_raw(ROOT / "web_page.h", "INDEX_HTML")
 CAL_HTML = extract_raw(ROOT / "calibration.cpp", "CAL_HTML")
 RADAR_HTML = extract_raw(ROOT / "radar_test.cpp", "RADAR_HTML")
 CONTROLLER_HTML = extract_raw(ROOT / "controller.cpp", "CONTROLLER_HTML")
+LEDS_HTML = extract_raw(ROOT / "leds_page.h", "LEDS_HTML")
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -72,7 +75,7 @@ class Handler(BaseHTTPRequestHandler):
         a = self._args()
 
         if path == "/preview":
-            return self._send((ROOT / "tools" / "preview" / "leds.html").read_text())
+            return self._send(LEDS_HTML)
 
         if path == "/":
             return self._send(INDEX_HTML)
@@ -171,6 +174,12 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/led/auto":
             print("[led/auto] status colours restored")
+            return self._send("OK", "text/plain")
+
+        if path == "/talk":
+            ms = max(100, min(10000, int(a.get("ms", 1500))))
+            state["talk"] = ms
+            print(f"[talk] ms={ms}")
             return self._send("OK", "text/plain")
 
         if path == "/animate":

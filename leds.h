@@ -20,6 +20,13 @@ enum LedMode : uint8_t {
   LED_PULSE,
   LED_RAINBOW_COMET,
   LED_DUAL_CHASE,
+  LED_WARNING,
+  LED_ALERT,
+  LED_TALK,
+  LED_THINK,
+  LED_SLEEP,
+  LED_HAPPY,
+  LED_SCAN,
   LED_MODE_COUNT
 };
 
@@ -34,7 +41,11 @@ void ledSetBrightness(uint8_t brightness);
 
 // Status control (only applied while the user hasn't taken manual control)
 void ledSetStatus(uint8_t r, uint8_t g, uint8_t b);
+void ledSetStatusEffect(uint8_t mode);
 void ledAuto();
+
+// Temporary talk animation; restores the previous mode when the time expires.
+void ledTalk(uint16_t ms);
 
 // Legacy helper kept for existing callers
 void setColor(uint8_t r, uint8_t g, uint8_t b);

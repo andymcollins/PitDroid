@@ -1,3 +1,5 @@
+#pragma once
+const char LEDS_HTML[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
 <html>
 <head>
@@ -148,6 +150,13 @@
       <option value="12">Heartbeat Pulse</option>
       <option value="13">Rainbow Comet</option>
       <option value="14">Dual Chase</option>
+      <option value="15">Warning Pulse</option>
+      <option value="16">Alert Flash</option>
+      <option value="17">Talking</option>
+      <option value="18">Thinking</option>
+      <option value="19">Sleep</option>
+      <option value="20">Happy</option>
+      <option value="21">Radar Scan</option>
     </select>
   </div>
   <div class="row">
@@ -203,7 +212,7 @@ const ui = {
   frameInfo: document.getElementById('frameInfo'),
 };
 
-const MODE_NAMES = ['Solid','Rainbow','Chase','Comet','Breathe','Sparkle','Scanner','Theater','Ring Cycle','Random','Fire','Colour Wipe','Heartbeat Pulse','Rainbow Comet','Dual Chase'];
+const MODE_NAMES = ['Solid','Rainbow','Chase','Comet','Breathe','Sparkle','Scanner','Theater','Ring Cycle','Random','Fire','Colour Wipe','Heartbeat Pulse','Rainbow Comet','Dual Chase','Warning Pulse','Alert Flash','Talking','Thinking','Sleep','Happy','Radar Scan'];
 let mode = 1, speed = 50, brightness = 200;
 let base = hexToRgb(ui.color.value);
 let frame = 0, playing = true, last = 0, buf = new Array(N).fill(0);
@@ -363,6 +372,64 @@ function renderDualChase() {
   buf[b] = c;
 }
 
+// ---- semantic status patterns ----
+function renderWarning() {
+  const p = frame % 80;
+  let level = p < 40 ? Math.floor(p * 255 / 40) : Math.floor((80 - p) * 255 / 40);
+  if (level < 24) level = 24;
+  const c = scaleColor(rgb(255, 0, 0), level);
+  for (let i = 0; i < N; i++) buf[i] = c;
+}
+function renderAlert() {
+  const p = frame % 20;
+  const on = p < 3 || (p >= 7 && p < 10);
+  const c = on ? rgb(255, 0, 0) : rgb(24, 0, 0);
+  for (let i = 0; i < N; i++) buf[i] = c;
+}
+function renderTalk() {
+  const baseColor = rgb(...base);
+  for (let i = 0; i < N; i++) buf[i] = scaleColor(baseColor, 10);
+  const bars = 3 + Math.floor(Math.random() * 4);
+  for (let b = 0; b < bars; b++) {
+    const start = Math.floor(Math.random() * N);
+    const len = 2 + Math.floor(Math.random() * 6);
+    const level = 140 + Math.floor(Math.random() * 116);
+    for (let k = 0; k < len; k++) {
+      buf[(start + k) % N] = scaleColor(baseColor, level);
+    }
+  }
+}
+function renderThink() {
+  const dim = scaleColor(rgb(255, 120, 0), 18);
+  for (let i = 0; i < N; i++) buf[i] = dim;
+  const pos = frame % N;
+  for (let k = 0; k < 7; k++) {
+    buf[(pos + k) % N] = scaleColor(rgb(255, 170, 0), 255 - k * 32);
+  }
+}
+function renderSleep() {
+  const p = frame % 160;
+  const level = p < 80 ? Math.floor(16 + p * 64 / 80) : Math.floor(16 + (160 - p) * 64 / 80);
+  const c = scaleColor(rgb(0, 30, 255), level);
+  for (let i = 0; i < N; i++) buf[i] = c;
+}
+function renderHappy() {
+  const dim = scaleColor(rgb(140, 255, 0), 24);
+  for (let i = 0; i < N; i++) buf[i] = dim;
+  for (let n = 0; n < 6; n++) {
+    buf[Math.floor(Math.random() * N)] = rgb(190, 255, 60);
+  }
+}
+function renderScan() {
+  const active = Math.floor((frame % 90) / 30);
+  for (let i = 0; i < N; i++) {
+    const ring = ringOf(i);
+    if (ring === active)     buf[i] = rgb(0, 200, 255);
+    else if (ring < active)  buf[i] = scaleColor(rgb(0, 200, 255), 60);
+    else                     buf[i] = 0;
+  }
+}
+
 function renderFrame() {
   switch (mode) {
     case 1: renderRainbow(); break;
@@ -379,6 +446,13 @@ function renderFrame() {
     case 12: renderPulse(); break;
     case 13: renderRainbowComet(); break;
     case 14: renderDualChase(); break;
+    case 15: renderWarning(); break;
+    case 16: renderAlert(); break;
+    case 17: renderTalk(); break;
+    case 18: renderThink(); break;
+    case 19: renderSleep(); break;
+    case 20: renderHappy(); break;
+    case 21: renderScan(); break;
     default: renderSolid(); break;
   }
   draw();
@@ -474,7 +548,7 @@ ui.speed.addEventListener('input', () => {
 ui.color.addEventListener('input', () => {
   base = hexToRgb(ui.color.value);
   if (mode === 0 || mode === 2 || mode === 3 || mode === 4 || mode === 6 || mode === 7 ||
-      mode === 11 || mode === 12 || mode === 14) renderFrame();
+      mode === 11 || mode === 12 || mode === 14 || mode === 17) renderFrame();
 });
 ui.bri.addEventListener('input', () => {
   brightness = parseInt(ui.bri.value, 10);
@@ -496,3 +570,5 @@ requestAnimationFrame(loop);
 </script>
 </body>
 </html>
+
+)rawliteral";
